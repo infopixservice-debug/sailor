@@ -5,8 +5,17 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>📜 The Great Expedition Codex - BDO Sailing & Barter Companion</title>
 <meta name="description" content="Il compendio definitivo per capitani BDO: sailor tracker, build optimizer, barter calculator, Carrack builder. Creato per la gilda.">
-<meta property="og:title" content="The Great Expedition Codex">
-<meta property="og:description" content="BDO Sailing & Barter Companion - Sailor tracker, builds, barter, Carrack progress">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://infopixservice-debug.github.io/sailor/">
+<meta property="og:title" content="📜 The Great Expedition Codex">
+<meta property="og:description" content="BDO Sailing & Barter Companion — 20 sailor, build optimizer, roll tracker, barter calc, Carrack progress tracker. Creato per la gilda.">
+<meta property="og:image" content="https://placehold.co/1200x630/0f2942/d4a548/png?text=The+Great+Expedition+Codex%0ABDO+Sailing+%26+Barter+Companion&font=Playfair">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="📜 The Great Expedition Codex">
+<meta name="twitter:description" content="BDO Sailing & Barter Companion per la gilda">
+<meta name="twitter:image" content="https://placehold.co/1200x630/0f2942/d4a548/png?text=The+Great+Expedition+Codex&font=Playfair">
 <meta name="theme-color" content="#d4a548">
 <style>
   :root {
@@ -534,6 +543,147 @@
     transition: opacity 0.3s;
   }
   .save-indicator.show { opacity: 1; }
+  /* Modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(4px);
+    z-index: 1000;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: linear-gradient(145deg, var(--bg-panel), var(--bg-ocean));
+    border: 3px double var(--brass);
+    border-radius: 12px;
+    padding: 24px 28px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 40px rgba(212,165,72,0.25);
+    position: relative;
+    animation: fadeIn 0.3s ease;
+  }
+  .modal-close {
+    position: absolute;
+    top: 8px; right: 10px;
+    background: transparent;
+    border: none;
+    color: var(--parchment);
+    font-size: 1.8rem;
+    cursor: pointer;
+    padding: 2px 12px;
+    line-height: 1;
+    opacity: 0.6;
+    box-shadow: none;
+  }
+  .modal-close:hover { opacity: 1; color: var(--brass-bright); box-shadow: none; transform: none; }
+  .modal h3 {
+    color: var(--brass-bright);
+    font-size: 1.4rem;
+    margin: 0 0 14px;
+    display: flex; align-items: center; gap: 10px;
+    border-bottom: 1px solid rgba(212,165,72,0.3);
+    padding-bottom: 10px;
+  }
+  .modal-section { margin: 14px 0; }
+  .modal-section h4 {
+    color: var(--brass-bright);
+    font-size: 0.85rem;
+    margin: 0 0 8px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    opacity: 0.9;
+  }
+  .modal-stat-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 14px;
+    padding: 5px 2px;
+    border-bottom: 1px dotted rgba(212,165,72,0.18);
+    font-size: 0.92rem;
+  }
+  .modal-stat-row:last-child { border-bottom: none; }
+  .modal-stat-row strong { color: var(--brass-bright); }
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120px);
+    background: linear-gradient(145deg, var(--bg-panel), var(--bg-ocean));
+    color: var(--parchment);
+    border: 2px solid var(--brass);
+    border-radius: 8px;
+    padding: 12px 22px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    z-index: 2000;
+    font-weight: bold;
+    transition: transform 0.35s cubic-bezier(.4,1.5,.5,1);
+    pointer-events: none;
+    max-width: 85vw;
+    text-align: center;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.good { border-color: var(--green); color: var(--green); }
+  .toast.bad { border-color: var(--red); color: var(--red); }
+  /* Toolbar */
+  .toolbar {
+    display: flex;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .toolbar button {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    background: linear-gradient(180deg, var(--wood), var(--wood-dark));
+    color: var(--parchment);
+    border: 1px solid var(--brass);
+  }
+  .toolbar button:hover { color: var(--brass-bright); }
+  kbd {
+    display: inline-block;
+    padding: 1px 7px;
+    font-size: 0.75rem;
+    background: var(--bg-deep);
+    border: 1px solid var(--brass);
+    border-radius: 3px;
+    color: var(--brass-bright);
+    font-family: 'Consolas', monospace;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
+  .sailor-card.loaded {
+    border-color: var(--green);
+    box-shadow: 0 0 15px rgba(74,222,128,0.4);
+  }
+  .build-copy {
+    margin-top: 8px;
+    font-size: 0.78rem;
+    padding: 4px 10px;
+    background: rgba(0,0,0,0.3);
+    color: var(--brass-bright);
+    border: 1px solid var(--brass);
+  }
+  .build-copy:hover { background: var(--brass); color: var(--ink); transform: none; }
+  .preset-chip {
+    padding: 6px 12px;
+    font-size: 0.82rem;
+    background: rgba(212,165,72,0.15);
+    border: 1px solid var(--brass);
+    color: var(--brass-bright);
+    border-radius: 16px;
+    cursor: pointer;
+  }
+  .preset-chip:hover { background: var(--brass); color: var(--ink); }
 </style>
 </head>
 <body>
@@ -546,6 +696,13 @@
   <p class="subtitle">~ Il compendio definitivo per capitani del Great Ocean ~</p>
   <div class="header-footer">⚓ Sailors · Builds · Barter · Carrack · Margoria ⚓</div>
 </header>
+
+<div class="toolbar">
+  <button onclick="exportData()" title="Esporta tutti i dati salvati in un file JSON">📥 Esporta backup</button>
+  <button onclick="document.getElementById('import-file').click()" title="Importa un backup JSON">📤 Importa backup</button>
+  <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
+  <button onclick="openShortcutsModal()" title="Scorciatoie tastiera">⌨️ Scorciatoie</button>
+</div>
 
 <div class="tabs">
   <button class="tab active" data-tab="browser">🏴‍☠️ Crew Browser</button>
@@ -674,6 +831,14 @@
 <div class="panel" id="panel-comparator">
   <h2>⚔️ Comparator</h2>
   <p class="hint">Confronta fino a 4 sailor type fianco a fianco. I valori migliori sono evidenziati in verde.</p>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; align-items:center;">
+    <span style="font-size:0.85rem; opacity:0.85;">Preset:</span>
+    <button class="preset-chip" onclick="comparePreset('smh')">🌊 Top 4 SMH</button>
+    <button class="preset-chip" onclick="comparePreset('barter')">💰 Top 4 Barter</button>
+    <button class="preset-chip" onclick="comparePreset('turn')">↪️ Top 4 Turn</button>
+    <button class="preset-chip" onclick="comparePreset('brake')">🛑 Top 4 Brake</button>
+    <button class="preset-chip" onclick="comparePreset('reset')" style="background:rgba(239,68,68,0.15); border-color:#ef4444; color:#fca5a5;">✖ Reset</button>
+  </div>
   <div class="filters" id="compare-selects"></div>
   <div class="compare-wrap" id="compare-wrap"></div>
 </div>
@@ -987,6 +1152,11 @@
 </div>
 
 </div>
+
+<div class="modal-overlay" id="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modal-content"></div>
+</div>
+<div class="toast" id="toast"></div>
 
 <script>
 // ============ DATA ============
@@ -1435,6 +1605,150 @@ function init() {
   renderGuide();
   initBarter();
   initCarrack();
+  initKeyboard();
+}
+
+// ============ MODAL & TOAST ============
+window.openModal = function(html) {
+  const o = document.getElementById('modal-overlay');
+  const c = document.getElementById('modal-content');
+  c.innerHTML = `<button class="modal-close" onclick="closeModal()" aria-label="Chiudi">×</button>` + html;
+  o.classList.add('show');
+};
+window.closeModal = function() {
+  document.getElementById('modal-overlay').classList.remove('show');
+};
+let toastTimer = null;
+window.toast = function(msg, kind) {
+  const t = document.getElementById('toast');
+  t.className = 'toast show' + (kind ? ' ' + kind : '');
+  t.textContent = msg;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+};
+
+// ============ EXPORT / IMPORT ============
+window.exportData = async function() {
+  try {
+    const [sailors, carrack] = await Promise.all([
+      storage.list('sailor:'),
+      storage.get('carrack-stock')
+    ]);
+    const payload = { version: 1, exportedAt: new Date().toISOString(), sailors: {}, carrackStock: null };
+    if (sailors && sailors.keys) {
+      for (const k of sailors.keys) {
+        const r = await storage.get(k);
+        if (r) payload.sailors[k] = r.value;
+      }
+    }
+    if (carrack) payload.carrackStock = carrack.value;
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `expedition-codex-backup-${Date.now()}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast('Backup esportato 📥', 'good');
+  } catch (e) {
+    toast('Errore export: ' + e.message, 'bad');
+  }
+};
+
+window.importData = async function(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const payload = JSON.parse(text);
+    if (!payload.version) throw new Error('Formato non riconosciuto');
+    if (!confirm('Importare il backup sovrascrive i dati attuali. Continuare?')) {
+      event.target.value = '';
+      return;
+    }
+    let count = 0;
+    if (payload.sailors) {
+      for (const [key, value] of Object.entries(payload.sailors)) {
+        await storage.set(key, value);
+        count++;
+      }
+    }
+    if (payload.carrackStock) {
+      await storage.set('carrack-stock', payload.carrackStock);
+      carrackStock = JSON.parse(payload.carrackStock);
+    }
+    event.target.value = '';
+    loadSavedSailors();
+    renderCarrack();
+    toast(`Backup importato: ${count} sailor 📤`, 'good');
+  } catch (e) {
+    toast('Errore import: ' + e.message, 'bad');
+    event.target.value = '';
+  }
+};
+
+window.openShortcutsModal = function() {
+  openModal(`
+    <h3>⌨️ Scorciatoie tastiera</h3>
+    <div class="modal-section">
+      <div class="modal-stat-row"><span><kbd>/</kbd> Focus ricerca</span><strong></strong></div>
+      <div class="modal-stat-row"><span><kbd>Esc</kbd> Chiudi modal / reset filtri</span><strong></strong></div>
+      <div class="modal-stat-row"><span><kbd>1</kbd>–<kbd>7</kbd> Cambia tab</span><strong></strong></div>
+      <div class="modal-stat-row"><span><kbd>Ctrl</kbd>+<kbd>S</kbd> Salva tracker corrente</span><strong></strong></div>
+      <div class="modal-stat-row"><span><kbd>Ctrl</kbd>+<kbd>E</kbd> Esporta backup</span><strong></strong></div>
+    </div>
+    <p style="font-size:0.85rem; opacity:0.8; font-style:italic; margin-top:12px;">
+      L'auto-save del tracker parte 900ms dopo ogni modifica se hai assegnato un nome.
+    </p>
+  `);
+};
+
+// ============ KEYBOARD SHORTCUTS ============
+function initKeyboard() {
+  document.addEventListener('keydown', (e) => {
+    const tag = (e.target.tagName || '').toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select';
+
+    if (e.key === 'Escape') {
+      const overlay = document.getElementById('modal-overlay');
+      if (overlay.classList.contains('show')) {
+        closeModal();
+        return;
+      }
+      const search = document.getElementById('filter-search');
+      if (document.activeElement === search) {
+        search.value = '';
+        search.blur();
+        renderSailors();
+      }
+      return;
+    }
+    if (typing) return;
+    if (e.key === '/') {
+      e.preventDefault();
+      const active = document.querySelector('.panel.active');
+      const search = active && active.querySelector('input[type="text"][id*="search"], input[type="text"][placeholder*="Cerca" i], input[type="text"][placeholder*="🔍"]');
+      if (search) search.focus();
+      return;
+    }
+    if (/^[1-7]$/.test(e.key)) {
+      const tabs = document.querySelectorAll('.tab');
+      const idx = parseInt(e.key, 10) - 1;
+      if (tabs[idx]) tabs[idx].click();
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      if (document.querySelector('.tab.active').dataset.tab === 'tracker') {
+        e.preventDefault();
+        saveTracker();
+      }
+      return;
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'e') {
+      e.preventDefault();
+      exportData();
+    }
+  });
 }
 
 // ============ CARRACK BUILDER ============
@@ -1798,32 +2112,59 @@ function renderSailors() {
 function showDetail(name) {
   const s = SAILORS.find(x => x.name === name);
   const sc = SCORES[name];
+  const g = GROWTH[name];
   const isCannon = s.range > 0 || s.accuracy > 0 || s.angle > 0;
-  let cannonStr = '';
-  if (isCannon) {
-    cannonStr = `\n\nCANNON STATS:
-🎯 Range (Force): ${s.range}
-🔭 Accuracy (Focus): ${s.accuracy}
-📐 Angle (Vision): ${s.angle}`;
-  }
-  alert(`${s.icon} ${s.name}
-────────────────────
-Razza: ${s.race}
-Location: ${s.location}
-Appetite: ${s.appetite} LT
-Cabin cost: ${s.cabin}
-Weight: ${s.weight} LT
-
-STATS BASE:
-⚡ Speed (Endurance): ${s.speed}
-🚀 Accel (Wits): ${s.accel}
-↪️ Turn (Awareness): ${s.turn}
-🛑 Brake (Strength): ${s.brake}${cannonStr}
-
-BENEFIT SCORES (%):
-Weight ${sc.weight} | Speed ${sc.speed}
-Accel ${sc.accel} | Turn ${sc.turn} | Brake ${sc.brake}
-🌊 SMH: ${sc.smh} | 💰 Barter: ${sc.barter} | Total: ${sc.total}`);
+  const row = (label, val) => `<div class="modal-stat-row"><span>${label}</span><strong>${val}</strong></div>`;
+  const growthRow = (label, key) => g
+    ? `<div class="modal-stat-row"><span>${label}</span><strong>+${g[key][0].toFixed(3)} → +${g[key][1].toFixed(3)}</strong></div>`
+    : '';
+  openModal(`
+    <h3><span style="font-size:1.6rem;">${s.icon}</span> ${s.name}</h3>
+    <div class="modal-section">
+      <h4>Identità</h4>
+      ${row('Razza', s.race)}
+      ${row('Location', s.location)}
+      ${row('Appetite', s.appetite + ' LT')}
+      ${row('Cabin cost', s.cabin)}
+      ${row('Weight', s.weight + ' LT')}
+    </div>
+    <div class="modal-section">
+      <h4>Stats base (Lv.1)</h4>
+      ${row('⚡ Speed (Endurance)', s.speed)}
+      ${row('🚀 Accel (Wits)', s.accel)}
+      ${row('↪️ Turn (Awareness)', s.turn)}
+      ${row('🛑 Brake (Strength)', s.brake)}
+    </div>
+    ${isCannon ? `
+      <div class="modal-section">
+        <h4>Cannon stats</h4>
+        ${row('🎯 Range (Force)', s.range)}
+        ${row('🔭 Accuracy (Focus)', s.accuracy)}
+        ${row('📐 Angle (Vision)', s.angle)}
+      </div>
+    ` : ''}
+    <div class="modal-section">
+      <h4>Growth per level (min → max roll)</h4>
+      ${growthRow('⚡ Speed', 'speed')}
+      ${growthRow('🚀 Accel', 'accel')}
+      ${growthRow('↪️ Turn', 'turn')}
+      ${growthRow('🛑 Brake', 'brake')}
+    </div>
+    <div class="modal-section">
+      <h4>Benefit scores (%)</h4>
+      ${row('⚖️ Weight', sc.weight)}
+      ${row('⚡ Speed', sc.speed)}
+      ${row('🚀 Accel', sc.accel)}
+      ${row('↪️ Turn', sc.turn)}
+      ${row('🛑 Brake', sc.brake)}
+      ${row('🌊 SMH', sc.smh)}
+      ${row('💰 Barter', sc.barter)}
+      ${row('⚖️ Total', sc.total)}
+    </div>
+    <div style="text-align:center; margin-top:18px;">
+      <button onclick="closeModal(); document.querySelector('.tab[data-tab=tracker]').click(); document.getElementById('tracker-type').value='${s.name.replace(/'/g, "\\'")}'; document.getElementById('tracker-type').dispatchEvent(new Event('change'));">📈 Traccia questo sailor</button>
+    </div>
+  `);
 }
 
 // ============ BUILDER ============
@@ -1848,6 +2189,7 @@ function renderBuilds() {
   
   container.innerHTML = `<h3>Top 10 Build per ${goalLabel}</h3>` + top10.map((b, i) => {
     const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
+    const summary = `${b.name} — ${b.cabin} slots | ⚖️${b.weight}LT | ⚡${b.speed} 🚀${b.accel} ↪${b.turn} 🛑${b.brake} | ${goalLabel} ${b[goal] || 0}`;
     return `
     <div class="build-result">
       <div class="build-title">
@@ -1865,9 +2207,21 @@ function renderBuilds() {
           🎯 ${goalLabel}: ${b[goal] || 0}
         </span>
       </div>
+      <button class="build-copy" onclick="copyBuild(this, ${JSON.stringify(summary).replace(/"/g, '&quot;')})">📋 Copia per Discord</button>
     </div>
   `}).join('');
 }
+
+window.copyBuild = async function(btn, text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    const orig = btn.innerHTML;
+    btn.innerHTML = '✅ Copiato!';
+    setTimeout(() => btn.innerHTML = orig, 1500);
+  } catch (e) {
+    toast('Copia fallita', 'bad');
+  }
+};
 
 document.getElementById('build-slots').addEventListener('change', renderBuilds);
 document.getElementById('build-goal').addEventListener('change', renderBuilds);
@@ -1880,8 +2234,36 @@ function initTracker() {
   const sel = document.getElementById('tracker-type');
   sel.innerHTML = '<option value="">-- Seleziona sailor type --</option>' +
     SAILORS.map(s => `<option value="${s.name}">${s.icon} ${s.name}</option>`).join('');
-  sel.addEventListener('change', renderTracker);
-  document.getElementById('tracker-name').addEventListener('input', () => {});
+  sel.addEventListener('change', () => {
+    const newType = sel.value;
+    if (newType !== currentTracker.type) {
+      currentTracker = { type: newType, name: '', values: {} };
+      STAT_KEYS.forEach(k => currentTracker.values[k] = {});
+      document.getElementById('tracker-name').value = '';
+      loadedSailorKey = null;
+    }
+    renderTracker();
+    refreshLoadedHighlight();
+  });
+  document.getElementById('tracker-name').addEventListener('input', debounce(autoSaveTracker, 900));
+}
+
+let loadedSailorKey = null;
+let saveTimer = null;
+
+function debounce(fn, ms) {
+  let t;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+async function autoSaveTracker() {
+  if (!currentTracker.type) return;
+  const name = document.getElementById('tracker-name').value.trim();
+  if (!name) return;
+  await saveTracker(true);
 }
 
 let currentTracker = {
@@ -1931,14 +2313,6 @@ function renderTracker() {
                oninput="updateCell('${stat}', ${lv}, this.value)">
       </div>`;
     }
-    const total = s[stat] + STAT_KEYS === stat ? 0 : 0; // placeholder
-    let sumGrowth = 0;
-    for (let lv = 2; lv <= 10; lv++) {
-      const cv = parseFloat(currentTracker.values[stat][lv]) || 0;
-      const prevLv = lv - 1;
-      const prev = prevLv === 1 ? s[stat] : (parseFloat(currentTracker.values[stat][prevLv]) || 0);
-      if (cv && prev) sumGrowth += Math.max(0, cv - prev);
-    }
     const finalStat = parseFloat(currentTracker.values[stat][10]) || s[stat];
     html += `<div class="tracker-summary">${finalStat.toFixed(2)}</div>`;
   });
@@ -1952,6 +2326,8 @@ window.updateCell = function(stat, lv, val) {
   if (!currentTracker.values[stat]) currentTracker.values[stat] = {};
   currentTracker.values[stat][lv] = val;
   updateTrackerHighlights();
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(autoSaveTracker, 900);
 };
 
 function updateTrackerHighlights() {
@@ -2013,11 +2389,15 @@ function updateTrackerHighlights() {
 
 function randomPick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 
-async function saveTracker() {
-  if (!currentTracker.type) { alert('Seleziona prima un sailor type!'); return; }
+async function saveTracker(silent) {
+  if (!currentTracker.type) {
+    if (!silent) toast('Seleziona prima un sailor type!', 'bad');
+    return;
+  }
   const name = document.getElementById('tracker-name').value.trim() || 'Unnamed';
   const key = `sailor:${currentTracker.type}:${name}`;
   currentTracker.name = name;
+  loadedSailorKey = key;
   try {
     await storage.set(key, JSON.stringify({
       type: currentTracker.type,
@@ -2028,10 +2408,17 @@ async function saveTracker() {
     const ind = document.getElementById('save-ind');
     ind.classList.add('show');
     setTimeout(() => ind.classList.remove('show'), 2000);
+    if (!silent) toast('Sailor salvato ⚓', 'good');
     loadSavedSailors();
   } catch (e) {
-    alert('Errore di salvataggio: ' + e.message);
+    if (!silent) toast('Errore salvataggio: ' + e.message, 'bad');
   }
+}
+
+function refreshLoadedHighlight() {
+  document.querySelectorAll('#saved-sailors .sailor-card').forEach(c => {
+    c.classList.toggle('loaded', c.dataset.key === loadedSailorKey);
+  });
 }
 
 function resetTracker() {
@@ -2059,11 +2446,13 @@ async function loadSavedSailors() {
     container.innerHTML = `<div class="sailor-grid">` + sailors.map(({key, data}) => {
       const s = SAILORS.find(x => x.name === data.type);
       if (!s) return '';
+      const isLoaded = key === loadedSailorKey;
       return `
-        <div class="sailor-card">
+        <div class="sailor-card ${isLoaded ? 'loaded' : ''}" data-key="${key.replace(/"/g, '&quot;')}">
           <div class="sailor-name">
             <span class="race-icon">${s.icon}</span>
             ${data.name}
+            ${isLoaded ? '<span style="margin-left:auto;background:rgba(74,222,128,0.3);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">ATTIVO</span>' : ''}
           </div>
           <div class="sailor-meta">
             <span>${data.type}</span>
@@ -2087,11 +2476,14 @@ window.loadSailor = async function(key) {
     if (!r) return;
     const d = JSON.parse(r.value);
     currentTracker = { type: d.type, name: d.name, values: d.values };
+    loadedSailorKey = key;
     document.getElementById('tracker-type').value = d.type;
     document.getElementById('tracker-name').value = d.name;
     renderTracker();
+    loadSavedSailors();
+    toast(`Caricato: ${d.name}`, 'good');
   } catch(e) {
-    alert('Errore nel caricamento: ' + e.message);
+    toast('Errore caricamento: ' + e.message, 'bad');
   }
 };
 
@@ -2099,7 +2491,9 @@ window.deleteSailor = async function(key) {
   if (!confirm('Eliminare questo sailor dai salvati?')) return;
   try {
     await storage.delete(key);
+    if (loadedSailorKey === key) loadedSailorKey = null;
     loadSavedSailors();
+    toast('Sailor eliminato', 'good');
   } catch(e) {}
 };
 
@@ -2120,6 +2514,23 @@ function renderCompareSelects() {
   }
   wrap.innerHTML = html;
 }
+
+window.comparePreset = function(goal) {
+  if (goal === 'reset') {
+    for (let i = 0; i < 4; i++) document.getElementById(`cmp-${i}`).value = '';
+    renderCompare();
+    return;
+  }
+  const sorted = [...SAILORS].sort((a, b) => {
+    if (goal === 'smh' || goal === 'barter') return SCORES[b.name][goal] - SCORES[a.name][goal];
+    return b[goal] - a[goal];
+  });
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`cmp-${i}`).value = sorted[i] ? sorted[i].name : '';
+  }
+  renderCompare();
+  toast(`Top 4 ${goal.toUpperCase()} caricati`, 'good');
+};
 
 window.renderCompare = function() {
   const selected = [];
