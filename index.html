@@ -405,6 +405,15 @@
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 15px;
   }
+  .sailor-avatar {
+    border-radius: 50%;
+    object-fit: cover;
+    background: rgba(10,25,41,0.6);
+    border: 2px solid var(--brass);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(244,201,107,0.2);
+    flex-shrink: 0;
+    vertical-align: middle;
+  }
   .sailor-card {
     background: linear-gradient(145deg, var(--bg-panel), var(--bg-ocean));
     border: 2px solid var(--brass);
@@ -2571,6 +2580,16 @@ function populateFilters() {
   });
 }
 
+const SAILOR_IMG_OVERRIDES = { 'Quick-Witted': 'Quick-Witted.webp' };
+function sailorImage(name) {
+  const file = SAILOR_IMG_OVERRIDES[name] || (name.replace(/-/g, ' ') + '.webp');
+  return 'assets/sailors/' + encodeURIComponent(file);
+}
+
+function sailorAvatar(s, size = 44) {
+  return `<img src="${sailorImage(s.name)}" alt="${s.name}" class="sailor-avatar" loading="lazy" style="width:${size}px;height:${size}px;" onerror="this.remove()">`;
+}
+
 function renderSailors() {
   const race = document.getElementById('filter-race').value;
   const loc = document.getElementById('filter-location').value;
@@ -2603,7 +2622,7 @@ function renderSailors() {
     return `
     <div class="sailor-card" onclick="showDetail('${s.name}')">
       <div class="sailor-name">
-        <span class="race-icon">${s.icon}</span>
+        ${sailorAvatar(s, 44)}<span class="race-icon" style="margin-left:2px;">${s.icon}</span>
         ${s.name}
         ${isCannon ? '<span style="margin-left: auto; background: rgba(239,68,68,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: #fca5a5;">💥 CANNON</span>' : ''}
       </div>
@@ -2642,7 +2661,7 @@ function showDetail(name) {
     ? `<div class="modal-stat-row"><span>${label}</span><strong>+${g[key][0].toFixed(3)} → +${g[key][1].toFixed(3)}</strong></div>`
     : '';
   openModal(`
-    <h3><span style="font-size:1.6rem;">${s.icon}</span> ${s.name}</h3>
+    <h3 style="display:flex;align-items:center;gap:10px;">${sailorAvatar(s, 56)}<span style="font-size:1.6rem;">${s.icon}</span> ${s.name}</h3>
     <div class="modal-section">
       <h4>Identità</h4>
       ${row('Razza', s.race)}
