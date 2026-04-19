@@ -2622,7 +2622,7 @@ function renderSailors() {
     return `
     <div class="sailor-card" onclick="showDetail('${s.name}')">
       <div class="sailor-name">
-        ${sailorAvatar(s, 44)}<span class="race-icon" style="margin-left:2px;">${s.icon}</span>
+        ${sailorAvatar(s, 44)}
         ${s.name}
         ${isCannon ? '<span style="margin-left: auto; background: rgba(239,68,68,0.3); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: #fca5a5;">💥 CANNON</span>' : ''}
       </div>
@@ -2661,7 +2661,7 @@ function showDetail(name) {
     ? `<div class="modal-stat-row"><span>${label}</span><strong>+${g[key][0].toFixed(3)} → +${g[key][1].toFixed(3)}</strong></div>`
     : '';
   openModal(`
-    <h3 style="display:flex;align-items:center;gap:10px;">${sailorAvatar(s, 56)}<span style="font-size:1.6rem;">${s.icon}</span> ${s.name}</h3>
+    <h3 style="display:flex;align-items:center;gap:12px;">${sailorAvatar(s, 56)} ${s.name}</h3>
     <div class="modal-section">
       <h4>Identità</h4>
       ${row('Razza', s.race)}
@@ -2992,7 +2992,7 @@ async function loadSavedSailors() {
       return `
         <div class="sailor-card ${isLoaded ? 'loaded' : ''}" data-key="${key.replace(/"/g, '&quot;')}">
           <div class="sailor-name">
-            <span class="race-icon">${s.icon}</span>
+            ${sailorAvatar(s, 36)}
             ${data.name}
             ${isLoaded ? '<span style="margin-left:auto;background:rgba(74,222,128,0.3);color:var(--green);padding:2px 8px;border-radius:4px;font-size:0.7rem;">ATTIVO</span>' : ''}
           </div>
@@ -3107,7 +3107,7 @@ window.renderCompare = function() {
     return `
       <div class="compare-col">
         <div class="sailor-name">
-          <span class="race-icon">${s.icon}</span>
+          ${sailorAvatar(s, 40)}
           ${s.name}
         </div>
         <div class="sailor-meta">
