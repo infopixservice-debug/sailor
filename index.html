@@ -49,28 +49,47 @@
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
-  /* Animated waves background */
+  /* Background: BDO ship screenshot + vignette/darkening overlay per leggibilità */
   .waves {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     z-index: 0;
     background:
-      radial-gradient(ellipse at top, #1a3a5c 0%, #0a1929 70%);
+      linear-gradient(180deg,
+        rgba(10,25,41,0.72) 0%,
+        rgba(15,41,66,0.78) 45%,
+        rgba(10,25,41,0.92) 100%),
+      radial-gradient(ellipse at center, rgba(10,25,41,0.25) 0%, rgba(10,25,41,0.75) 100%),
+      url('assets/bg.jpg') center center / cover no-repeat fixed,
+      #0a1929;
     pointer-events: none;
   }
   .waves::before, .waves::after {
     content: '';
     position: absolute;
     left: -50%; right: -50%;
-    height: 100px;
-    background: radial-gradient(ellipse at center, rgba(96,165,250,0.08) 0%, transparent 70%);
-    animation: wave 12s infinite ease-in-out;
+    height: 140px;
+    background: radial-gradient(ellipse at center, rgba(96,165,250,0.12) 0%, transparent 70%);
+    animation: wave 14s infinite ease-in-out;
+    pointer-events: none;
   }
-  .waves::before { bottom: 20%; }
-  .waves::after { bottom: 40%; animation-delay: -6s; opacity: 0.5; }
+  .waves::before { bottom: 18%; }
+  .waves::after { bottom: 38%; animation-delay: -7s; opacity: 0.5; }
   @keyframes wave {
     0%, 100% { transform: translateX(0) scaleY(1); }
     50% { transform: translateX(5%) scaleY(1.3); }
+  }
+  /* Su mobile l'immagine fixed è problematica → la faccio cover normale */
+  @media (max-width: 900px) {
+    .waves {
+      background:
+        linear-gradient(180deg,
+          rgba(10,25,41,0.78) 0%,
+          rgba(15,41,66,0.82) 50%,
+          rgba(10,25,41,0.94) 100%),
+        url('assets/bg.jpg') center center / cover no-repeat,
+        #0a1929;
+    }
   }
   .container {
     position: relative;
