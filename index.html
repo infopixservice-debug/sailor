@@ -877,6 +877,7 @@
   <button class="tab" data-tab="comparator">⚔️ Comparator</button>
   <button class="tab" data-tab="barter">💰 Barter Calc</button>
   <button class="tab" data-tab="carrack">🚢 Carrack Builder</button>
+  <button class="tab" data-tab="timers">⏱️ Daily/Weekly</button>
   <button class="tab" data-tab="guide">📖 Guide & Ships</button>
 </div>
 
@@ -1195,11 +1196,83 @@
 </div>
 
 <!-- ============ GUIDE ============ -->
+<div class="panel" id="panel-timers">
+  <h2>⏱️ Daily & Weekly Reset Tracker</h2>
+  <p class="hint">Sistema basato sulle meccaniche BDO attuali (Feb 2025): Barter Refresh con cooldown, reset giornaliero a mezzanotte UTC, reset settimanale giovedì.</p>
+
+  <div class="feedback warn" style="margin-bottom: 16px;">
+    ⚠️ <strong>Importante:</strong> Parley NON si rigenera passivamente — cap 1.000.000, serve premere manualmente "Barter Refresh". Il vecchio sistema "5 barter/day" è stato rimpiazzato.
+  </div>
+
+  <h3>🔄 Barter Refresh Tracker</h3>
+  <div id="barter-refresh-box" class="build-result" style="margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+      <div>
+        <label style="font-size: 0.88rem; opacity: 0.85;">Value Pack attivo?</label>
+        <select id="has-vp" style="margin-left: 8px;">
+          <option value="no">No (2 refresh/day, 100 punti)</option>
+          <option value="yes">Sì (3 refresh/day, 150 punti)</option>
+        </select>
+      </div>
+      <div>
+        <button onclick="useRefresh()" id="btn-refresh">🔁 Ho usato un Refresh</button>
+        <button onclick="resetBarterRefresh()" title="Reset manuale — usa solo se cambi server" style="background: linear-gradient(180deg,#3a1f1f,#2b1414); border-color: #7a3030;">↺ Reset</button>
+      </div>
+    </div>
+    <div id="refresh-status" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+      <!-- popolato da JS -->
+    </div>
+  </div>
+
+  <h3>📅 Daily Reset (mezzanotte UTC)</h3>
+  <div class="build-result" style="margin-bottom: 16px;">
+    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset: <strong id="daily-countdown" style="color: var(--brass-bright);">--:--:--</strong></div>
+    <div style="font-size: 0.85rem; opacity: 0.8;">I refresh giornalieri e il budget punti si resettano a questo momento.</div>
+  </div>
+
+  <h3>📆 Weekly Reset (Giovedì mezzanotte server)</h3>
+  <div class="build-result" style="margin-bottom: 16px;">
+    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset settimanale: <strong id="weekly-countdown" style="color: var(--brass-bright);">--d --h</strong></div>
+    <div style="margin-top: 12px;">
+      <div style="font-weight: 600; margin-bottom: 8px; color: var(--parchment);">Checklist settimanale (resetta automaticamente):</div>
+      <div id="weekly-checklist" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px;"></div>
+    </div>
+  </div>
+
+  <h3>🧭 First Mate Advisor (2025)</h3>
+  <p style="opacity: 0.85; margin-bottom: 10px; font-size: 0.9rem;">3 First Mate disponibili — occupano 1 sailor slot, <strong>non</strong> un cabin slot, non possono essere licenziati. Solo su Carrack (4 varianti) e Panokseon.</p>
+  <div id="firstmate-advisor" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 16px;"></div>
+
+  <h3>⚙️ Role Slot System (post-2025)</h3>
+  <div class="build-result">
+    <div style="font-weight: 600; color: var(--parchment); margin-bottom: 8px;">Ogni ruolo raddoppia le stat del sailor piazzato:</div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; font-size: 0.88rem;">
+      <div>⛵ <strong>Sail</strong>: Speed + Accel ×2</div>
+      <div>🎡 <strong>Wheel</strong>: Turn + Brake ×2</div>
+      <div>💥 <strong>Cannon</strong>: Range + Accuracy + Angle ×2</div>
+      <div>🍖 <strong>Mess</strong>: nutrimento (cabin alto)</div>
+      <div>🛏️ <strong>Deck</strong>: durability (cabin alto)</div>
+      <div>🎣 <strong>Fish</strong>: ogni sailor sano va bene</div>
+    </div>
+    <div style="margin-top: 10px; font-size: 0.85rem; opacity: 0.85;">💡 Usa <strong>Auto-Assign</strong> al Wharf Manager → il gioco piazza i sailor ottimali. Salva come <strong>Preset</strong> (separato per ogni variante Carrack).</div>
+  </div>
+</div>
+
 <div class="panel" id="panel-guide">
   <h2>📖 Guide & Ships</h2>
   <p class="hint">Tutto quello che ti serve sapere sui sailor: ships, First Mates, EXP, cure, slot speciali. Aggiornato con le patch BDO 2025.</p>
   
   <h3 style="color: #4ade80; border-bottom-color: #4ade80;">🆕 Aggiornamenti 2025</h3>
+  <div class="feedback warn" style="margin-bottom: 12px;">
+    <strong>📅 Patch 6 Febbraio 2025 — Barter & Crow Coin Rework</strong><br>
+    • <strong>Crow Coins ora ricompensa automatica</strong> (non più selezionabile) dopo ogni barter<br>
+    • <strong>Sailing EXP per barter fino a 2×</strong> i valori precedenti<br>
+    • <strong>L5 barter turn-in</strong>: 80–600 Crow Coins (tipico 100–200)<br>
+    • <strong>Sistema Refresh</strong>: 2/day free, 3/day con Value Pack, cooldown 2h, 100/150 punti refresh (il vecchio "5 barter/day" è deprecato)<br>
+    • <strong>Parley NON si rigenera passivamente</strong>: cap 1M, player preme manualmente "Barter Refresh"<br>
+    • <strong>Nuovi consumabili shop</strong>: Oquilla Crimson Fresh Water (40 CC), Void Sea Crystal (10 CC)<br>
+    • Ravinia/Rebinia shop weekly: Caphras/Memory Frag/Cron box (1/settimana, reset giovedì)
+  </div>
   <div class="feedback good" style="margin-bottom: 12px;">
     <strong>📅 Patch 6 Marzo 2025 — Sailor Management Rework</strong><br>
     • <strong>Sailor Preset System</strong>: salva set di sailor differenti per ogni variante di nave (Advance/Balance/Volante/Valor non condividono preset)<br>
@@ -1306,6 +1379,14 @@
   </div>
   <div class="feedback good">
     🎮 <strong>NUOVO — Usa l'Auto-Assign Feature:</strong> dal Wharf Manager → Manage Sailors → Auto-assign. Il gioco piazza automaticamente i tuoi sailor con le stats più alte negli slot giusti. Poi salva come Preset (separato per ogni variante Carrack).
+  </div>
+  <div class="feedback good" style="margin-top: 10px;">
+    🎯 <strong>Barter Method 2025 (Top-Down):</strong><br>
+    1. Clear tutti i <strong>T5</strong> disponibili per primi (priorità assoluta — più Crow Coin + EXP)<br>
+    2. Poi <strong>T4</strong>, poi <strong>T1-T3</strong> con lo stockpile rimanente<br>
+    3. <strong>Stockpile rules:</strong> tieni 2+ di ogni T5 a Ilya, 3+ a Ancado per mai "bloccare" una catena<br>
+    4. <strong>T5m (Margoria, 10M silver)</strong> = catena a valore più alto se hai Carrack + Parley sufficiente<br>
+    5. Refresh solo quando almeno 50% dei barter sono consumati (max value del punto refresh)
   </div>
   
   <h3>🔗 Fonti</h3>
@@ -1771,6 +1852,7 @@ function init() {
   renderGuide();
   initBarter();
   initCarrack();
+  initTimers();
   initKeyboard();
 }
 
@@ -1859,7 +1941,7 @@ window.openShortcutsModal = function() {
     <div class="modal-section">
       <div class="modal-stat-row"><span><kbd>/</kbd> Focus ricerca</span><strong></strong></div>
       <div class="modal-stat-row"><span><kbd>Esc</kbd> Chiudi modal / reset filtri</span><strong></strong></div>
-      <div class="modal-stat-row"><span><kbd>1</kbd>–<kbd>7</kbd> Cambia tab</span><strong></strong></div>
+      <div class="modal-stat-row"><span><kbd>1</kbd>–<kbd>8</kbd> Cambia tab</span><strong></strong></div>
       <div class="modal-stat-row"><span><kbd>Ctrl</kbd>+<kbd>S</kbd> Salva tracker corrente</span><strong></strong></div>
       <div class="modal-stat-row"><span><kbd>Ctrl</kbd>+<kbd>E</kbd> Esporta backup</span><strong></strong></div>
     </div>
@@ -1868,6 +1950,213 @@ window.openShortcutsModal = function() {
     </p>
   `);
 };
+
+// ============ TIMERS / RESET TRACKER ============
+const FIRST_MATE_ADVICE = {
+  'Proix': { tag: '🧭 Great Ocean', bestFor: 'Chi esplora Margoria / barter Oquilla.', color: '#3b82f6' },
+  'Cleia': { tag: '💰 Bartering', bestFor: 'Barter main / farm Crow Coin.', color: '#fbbf24' },
+  'Tranan Underfoe': { tag: '⚔️ Combat', bestFor: 'PvE / Sea Monster hunting.', color: '#ef4444' }
+};
+
+const WEEKLY_QUESTS = [
+  { id: 'caphras-box', label: '📦 Caphras Box da Ravinia (Crow Coin)', cost: '~2400 CC' },
+  { id: 'memfrag-box', label: '🧩 Memory Fragment Box da Ravinia', cost: '~2000 CC' },
+  { id: 'cron-box', label: '💎 Cron Stone Box da Rebinia (Lema)', cost: '~1500 CC' },
+  { id: 'ravikel-quest', label: '⚓ Weekly Quest Ravikel (Oquilla\'s Eye)', cost: 'Gratis' },
+  { id: 'khan-kill', label: '🐙 Khan kill settimanale', cost: 'Loot + Sea Coin' }
+];
+
+function getBarterConfig() {
+  const vp = (document.getElementById('has-vp')?.value || localStorage.getItem('bdo-barter-vp') || 'no') === 'yes';
+  return { vp, maxRefresh: vp ? 3 : 2, maxPoints: vp ? 150 : 100, cooldownMs: 2 * 60 * 60 * 1000 };
+}
+
+function getBarterState() {
+  const raw = localStorage.getItem('bdo-barter-state');
+  if (!raw) return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() };
+  try {
+    const s = JSON.parse(raw);
+    if (s.dayKey !== utcDayKey()) return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() };
+    return s;
+  } catch { return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() }; }
+}
+
+function saveBarterState(s) { localStorage.setItem('bdo-barter-state', JSON.stringify(s)); }
+
+function utcDayKey() {
+  const d = new Date();
+  return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
+}
+
+function useRefresh() {
+  const cfg = getBarterConfig();
+  const s = getBarterState();
+  const now = Date.now();
+  if (s.used >= cfg.maxRefresh) { toast('⚠️ Hai già usato tutti i refresh giornalieri'); return; }
+  if (s.lastRefresh && (now - s.lastRefresh) < cfg.cooldownMs) {
+    const left = cfg.cooldownMs - (now - s.lastRefresh);
+    toast(`⏱️ Cooldown attivo: ${formatDuration(left)} rimasti`);
+    return;
+  }
+  s.used += 1;
+  s.lastRefresh = now;
+  s.pointsUsed += 50;
+  saveBarterState(s);
+  renderBarterRefresh();
+  toast('✅ Refresh registrato');
+}
+
+function resetBarterRefresh() {
+  saveBarterState({ used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() });
+  renderBarterRefresh();
+  toast('↺ Tracker refresh resettato');
+}
+
+function renderBarterRefresh() {
+  const cfg = getBarterConfig();
+  const s = getBarterState();
+  const now = Date.now();
+  const cdLeft = s.lastRefresh ? Math.max(0, cfg.cooldownMs - (now - s.lastRefresh)) : 0;
+  const pointsLeft = Math.max(0, cfg.maxPoints - s.pointsUsed);
+  const box = document.getElementById('refresh-status');
+  if (!box) return;
+  box.innerHTML = `
+    <div style="padding: 10px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px;">
+      <div style="font-size: 0.82rem; opacity: 0.85;">Refresh usati oggi</div>
+      <div style="font-size: 1.4rem; font-weight: 700; color: var(--brass-bright);">${s.used} / ${cfg.maxRefresh}</div>
+    </div>
+    <div style="padding: 10px; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.4); border-radius: 8px;">
+      <div style="font-size: 0.82rem; opacity: 0.85;">Cooldown prossimo refresh</div>
+      <div style="font-size: 1.4rem; font-weight: 700; color: ${cdLeft > 0 ? '#ef4444' : '#4ade80'};">${cdLeft > 0 ? formatDuration(cdLeft) : 'Pronto'}</div>
+    </div>
+    <div style="padding: 10px; background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.4); border-radius: 8px;">
+      <div style="font-size: 0.82rem; opacity: 0.85;">Refresh Points disponibili</div>
+      <div style="font-size: 1.4rem; font-weight: 700; color: var(--parchment);">${pointsLeft} / ${cfg.maxPoints}</div>
+    </div>
+  `;
+  const btn = document.getElementById('btn-refresh');
+  if (btn) btn.disabled = (s.used >= cfg.maxRefresh) || cdLeft > 0;
+}
+
+function formatDuration(ms) {
+  const s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m ${sec}s`;
+}
+
+function renderDailyCountdown() {
+  const now = new Date();
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+  const diff = next - now;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const el = document.getElementById('daily-countdown');
+  if (el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+
+function renderWeeklyCountdown() {
+  const now = new Date();
+  const day = now.getUTCDay(); // 0 Sun .. 6 Sat; Thursday = 4
+  let daysToThu = (4 - day + 7) % 7;
+  if (daysToThu === 0) {
+    const todayReset = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 0, 0, 0));
+    if (now >= todayReset && now.getUTCHours() >= 0) daysToThu = 7;
+  }
+  const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysToThu, 0, 0, 0));
+  const diff = next - now;
+  const d = Math.floor(diff / 86400000);
+  const h = Math.floor((diff % 86400000) / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const el = document.getElementById('weekly-countdown');
+  if (el) el.textContent = `${d}g ${h}h ${m}m`;
+}
+
+function getWeeklyState() {
+  const weekKey = getWeekKey();
+  const raw = localStorage.getItem('bdo-weekly-state');
+  try {
+    const s = raw ? JSON.parse(raw) : {};
+    if (s.weekKey !== weekKey) return { weekKey, done: {} };
+    return s;
+  } catch { return { weekKey, done: {} }; }
+}
+
+function getWeekKey() {
+  const now = new Date();
+  const day = now.getUTCDay();
+  const daysSinceThu = (day - 4 + 7) % 7;
+  const thuDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - daysSinceThu));
+  return thuDate.toISOString().slice(0, 10);
+}
+
+function toggleWeekly(id) {
+  const s = getWeeklyState();
+  s.done[id] = !s.done[id];
+  localStorage.setItem('bdo-weekly-state', JSON.stringify(s));
+  renderWeeklyChecklist();
+}
+
+function renderWeeklyChecklist() {
+  const box = document.getElementById('weekly-checklist');
+  if (!box) return;
+  const s = getWeeklyState();
+  box.innerHTML = WEEKLY_QUESTS.map(q => {
+    const done = !!s.done[q.id];
+    return `
+      <label style="display: flex; align-items: center; gap: 8px; padding: 10px; background: ${done ? 'rgba(74,222,128,0.12)' : 'rgba(15,41,66,0.5)'}; border: 1px solid ${done ? 'rgba(74,222,128,0.5)' : 'rgba(212,165,72,0.25)'}; border-radius: 8px; cursor: pointer; transition: all 0.2s;">
+        <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleWeekly('${q.id}')" style="width: 18px; height: 18px; cursor: pointer;">
+        <div style="flex: 1;">
+          <div style="font-size: 0.92rem; ${done ? 'opacity: 0.6; text-decoration: line-through;' : ''}">${q.label}</div>
+          <div style="font-size: 0.78rem; opacity: 0.7;">${q.cost}</div>
+        </div>
+      </label>
+    `;
+  }).join('');
+}
+
+function renderFirstMateAdvisor() {
+  const box = document.getElementById('firstmate-advisor');
+  if (!box) return;
+  box.innerHTML = FIRST_MATES.map(fm => {
+    const adv = FIRST_MATE_ADVICE[fm.name] || { tag: '', bestFor: '', color: '#d4a548' };
+    return `
+    <div class="build-result" style="border-left: 4px solid ${adv.color};">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 6px;">
+        <div class="build-title" style="font-size: 1.05rem;">${fm.icon} ${fm.name}</div>
+        <span style="font-size: 0.78rem; color: ${adv.color}; font-weight: 600;">${adv.tag}</span>
+      </div>
+      <div style="font-size: 0.92rem; color: var(--parchment); font-weight: 600; margin-bottom: 4px;">${fm.skill}</div>
+      <div style="font-size: 0.86rem; opacity: 0.88; margin-bottom: 8px;">${fm.desc}</div>
+      <div style="font-size: 0.82rem; opacity: 0.75; font-style: italic;">→ ${adv.bestFor}</div>
+    </div>
+    `;
+  }).join('');
+}
+
+function initTimers() {
+  const vpSel = document.getElementById('has-vp');
+  if (vpSel) {
+    vpSel.value = localStorage.getItem('bdo-barter-vp') || 'no';
+    vpSel.addEventListener('change', () => {
+      localStorage.setItem('bdo-barter-vp', vpSel.value);
+      renderBarterRefresh();
+    });
+  }
+  renderBarterRefresh();
+  renderWeeklyChecklist();
+  renderFirstMateAdvisor();
+  renderDailyCountdown();
+  renderWeeklyCountdown();
+  setInterval(() => {
+    renderDailyCountdown();
+    renderWeeklyCountdown();
+    renderBarterRefresh();
+  }, 1000);
+}
 
 // ============ KEYBOARD SHORTCUTS ============
 function initKeyboard() {
@@ -1897,7 +2186,7 @@ function initKeyboard() {
       if (search) search.focus();
       return;
     }
-    if (/^[1-7]$/.test(e.key)) {
+    if (/^[1-8]$/.test(e.key)) {
       const tabs = document.querySelectorAll('.tab');
       const idx = parseInt(e.key, 10) - 1;
       if (tabs[idx]) tabs[idx].click();
