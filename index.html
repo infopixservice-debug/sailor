@@ -6,7 +6,7 @@
 <title>📜 The Great Expedition Codex - BDO Sailing & Barter Companion</title>
 <meta name="description" content="Il compendio definitivo per capitani BDO: sailor tracker, build optimizer, barter calculator, Carrack builder. Creato per la gilda.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://infopixservice-debug.github.io/sailor/">
+<meta property="og:url" content="https://bdo-expedition-codex.netlify.app/">
 <meta property="og:title" content="📜 The Great Expedition Codex">
 <meta property="og:description" content="BDO Sailing & Barter Companion — 20 sailor, build optimizer, roll tracker, barter calc, Carrack progress tracker. Creato per la gilda.">
 <meta property="og:image" content="https://placehold.co/1200x630/0f2942/d4a548/png?text=The+Great+Expedition+Codex%0ABDO+Sailing+%26+Barter+Companion&font=Playfair">
@@ -17,6 +17,9 @@
 <meta name="twitter:description" content="BDO Sailing & Barter Companion per la gilda">
 <meta name="twitter:image" content="https://placehold.co/1200x630/0f2942/d4a548/png?text=The+Great+Expedition+Codex&font=Playfair">
 <meta name="theme-color" content="#d4a548">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg-deep: #0a1929;
@@ -36,12 +39,15 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
-    font-family: 'Georgia', serif;
+    font-family: 'EB Garamond', 'Georgia', 'Palatino', serif;
+    font-size: 17px;
     background: var(--bg-deep);
     color: var(--parchment);
     min-height: 100vh;
     overflow-x: hidden;
     position: relative;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
   /* Animated waves background */
   .waves {
@@ -90,18 +96,61 @@
     position: relative;
     overflow: hidden;
   }
-  header::before, header::after {
-    content: '⚓';
+  /* Parchment grain texture overlay — sottile, solo su panel/header */
+  header::after,
+  .panel::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0.08;
+    mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' seed='7'/><feColorMatrix values='0 0 0 0 0.95  0 0 0 0 0.82  0 0 0 0 0.55  0 0 0 0.9 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    background-size: 220px 220px;
+    border-radius: inherit;
+  }
+  .panel { position: relative; }
+  /* Compass rose decorazioni (SVG inline) */
+  .compass-rose {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 3rem;
-    color: var(--brass);
-    opacity: 0.5;
-    text-shadow: 0 0 20px rgba(244,201,107,0.4);
+    width: 68px;
+    height: 68px;
+    opacity: 0.55;
+    filter: drop-shadow(0 0 14px rgba(244,201,107,0.45));
+    animation: slowSpin 60s linear infinite;
+    pointer-events: none;
   }
-  header::before { left: 40px; }
-  header::after { right: 40px; }
+  .compass-rose.left { left: 28px; }
+  .compass-rose.right { right: 28px; animation-direction: reverse; }
+  @keyframes slowSpin {
+    from { transform: translateY(-50%) rotate(0deg); }
+    to   { transform: translateY(-50%) rotate(360deg); }
+  }
+  @media (max-width: 700px) {
+    .compass-rose { display: none; }
+  }
+  /* Divider ornamentale */
+  .ornament-divider {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 14px auto 0;
+    max-width: 280px;
+    opacity: 0.75;
+  }
+  .ornament-divider::before,
+  .ornament-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--brass), transparent);
+  }
+  .ornament-divider span {
+    color: var(--brass);
+    font-size: 1.1rem;
+  }
   .header-decoration {
     position: absolute;
     top: 0; left: 50%;
@@ -111,26 +160,26 @@
     background: linear-gradient(90deg, transparent, var(--brass-bright), transparent);
   }
   h1 {
-    font-family: 'Georgia', 'Palatino', serif;
-    font-size: clamp(1.9rem, 4.5vw, 3.2rem);
+    font-family: 'Cinzel', 'Georgia', serif;
+    font-size: clamp(2rem, 4.8vw, 3.4rem);
     color: var(--brass-bright);
-    text-shadow: 
-      2px 2px 4px rgba(0,0,0,0.8), 
-      0 0 25px rgba(244,201,107,0.4),
-      0 0 50px rgba(244,201,107,0.2);
-    letter-spacing: 3px;
-    font-style: italic;
-    font-weight: bold;
-    line-height: 1.2;
-    margin-bottom: 4px;
+    text-shadow:
+      2px 2px 4px rgba(0,0,0,0.8),
+      0 0 25px rgba(244,201,107,0.45),
+      0 0 50px rgba(244,201,107,0.25);
+    letter-spacing: 4px;
+    font-weight: 700;
+    line-height: 1.15;
+    margin-bottom: 6px;
+    text-transform: uppercase;
   }
   .subtitle {
     color: var(--parchment);
     font-style: italic;
     margin-top: 10px;
-    font-size: 1rem;
-    opacity: 0.9;
-    font-family: 'Georgia', serif;
+    font-size: 1.05rem;
+    opacity: 0.92;
+    font-family: 'EB Garamond', 'Georgia', serif;
     letter-spacing: 1px;
   }
   .header-footer {
@@ -138,10 +187,35 @@
     padding-top: 12px;
     border-top: 1px solid rgba(212,165,72,0.3);
     color: var(--brass-bright);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
+    letter-spacing: 3px;
+    opacity: 0.85;
+    font-family: 'IM Fell English SC', 'Cinzel', serif;
+    text-transform: uppercase;
+  }
+  h2 {
+    font-family: 'Cinzel', 'Georgia', serif;
     letter-spacing: 2px;
-    opacity: 0.8;
-    font-variant: small-caps;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  h3 {
+    font-family: 'Cinzel', 'Georgia', serif;
+    letter-spacing: 1.5px;
+    font-weight: 600;
+  }
+  .tab {
+    font-family: 'Cinzel', 'Georgia', serif;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+  .sailor-name {
+    font-family: 'Cinzel', 'Georgia', serif;
+    letter-spacing: 1px;
+  }
+  .build-title {
+    font-family: 'Cinzel', 'Georgia', serif;
+    letter-spacing: 1px;
   }
   /* Tabs */
   .tabs {
@@ -158,9 +232,11 @@
     border: 2px solid var(--brass);
     border-radius: 8px 8px 0 0;
     cursor: pointer;
-    font-family: 'Georgia', serif;
-    font-size: 1rem;
-    font-weight: bold;
+    font-family: 'Cinzel', 'Georgia', serif;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
     transition: all 0.25s;
     box-shadow: 0 4px 10px rgba(0,0,0,0.4);
     position: relative;
@@ -692,9 +768,60 @@
 
 <header>
   <div class="header-decoration"></div>
+  <svg class="compass-rose left" viewBox="0 0 100 100" aria-hidden="true">
+    <defs>
+      <radialGradient id="cr-brass" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="#f4c96b"/>
+        <stop offset="70%" stop-color="#d4a548"/>
+        <stop offset="100%" stop-color="#8b5a2b"/>
+      </radialGradient>
+    </defs>
+    <circle cx="50" cy="50" r="46" fill="none" stroke="url(#cr-brass)" stroke-width="1.5"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="url(#cr-brass)" stroke-width="0.6" stroke-dasharray="2 3"/>
+    <g fill="url(#cr-brass)" stroke="#6b4423" stroke-width="0.5">
+      <polygon points="50,6 54,48 50,50 46,48"/>
+      <polygon points="50,94 54,52 50,50 46,52"/>
+      <polygon points="6,50 48,46 50,50 48,54"/>
+      <polygon points="94,50 52,46 50,50 52,54"/>
+    </g>
+    <g fill="#f4c96b" opacity="0.85">
+      <polygon points="50,18 52,48 50,50 48,48"/>
+      <polygon points="50,82 52,52 50,50 48,52"/>
+      <polygon points="18,50 48,48 50,50 48,52"/>
+      <polygon points="82,50 52,48 50,50 52,52"/>
+    </g>
+    <circle cx="50" cy="50" r="4" fill="#f4c96b" stroke="#6b4423" stroke-width="0.8"/>
+    <text x="50" y="14" font-family="Cinzel, serif" font-size="7" fill="#f4c96b" text-anchor="middle" font-weight="700">N</text>
+    <text x="50" y="91" font-family="Cinzel, serif" font-size="6" fill="#d4a548" text-anchor="middle" font-weight="600">S</text>
+    <text x="90" y="53" font-family="Cinzel, serif" font-size="6" fill="#d4a548" text-anchor="middle" font-weight="600">E</text>
+    <text x="10" y="53" font-family="Cinzel, serif" font-size="6" fill="#d4a548" text-anchor="middle" font-weight="600">W</text>
+  </svg>
+  <svg class="compass-rose right" viewBox="0 0 100 100" aria-hidden="true">
+    <use href="#cr-brass"/>
+    <circle cx="50" cy="50" r="46" fill="none" stroke="#d4a548" stroke-width="1.5"/>
+    <circle cx="50" cy="50" r="38" fill="none" stroke="#d4a548" stroke-width="0.6" stroke-dasharray="2 3"/>
+    <g fill="#d4a548" stroke="#6b4423" stroke-width="0.5">
+      <polygon points="50,6 54,48 50,50 46,48"/>
+      <polygon points="50,94 54,52 50,50 46,52"/>
+      <polygon points="6,50 48,46 50,50 48,54"/>
+      <polygon points="94,50 52,46 50,50 52,54"/>
+    </g>
+    <g fill="#f4c96b" opacity="0.85">
+      <polygon points="50,18 52,48 50,50 48,48"/>
+      <polygon points="50,82 52,52 50,50 48,52"/>
+      <polygon points="18,50 48,48 50,50 48,52"/>
+      <polygon points="82,50 52,48 50,50 52,52"/>
+    </g>
+    <circle cx="50" cy="50" r="4" fill="#f4c96b" stroke="#6b4423" stroke-width="0.8"/>
+    <text x="50" y="14" font-family="Cinzel, serif" font-size="7" fill="#f4c96b" text-anchor="middle" font-weight="700">N</text>
+    <text x="50" y="91" font-family="Cinzel, serif" font-size="6" fill="#d4a548" text-anchor="middle" font-weight="600">S</text>
+    <text x="90" y="53" font-family="Cinzel, serif" font-size="6" fill="#d4a548" text-anchor="middle" font-weight="600">E</text>
+    <text x="10" y="53" font-family="Cinzel, serif" font-size="6" fill="#d4a548" text-anchor="middle" font-weight="600">W</text>
+  </svg>
   <h1>📜 The Great Expedition Codex</h1>
   <p class="subtitle">~ Il compendio definitivo per capitani del Great Ocean ~</p>
-  <div class="header-footer">⚓ Sailors · Builds · Barter · Carrack · Margoria ⚓</div>
+  <div class="ornament-divider"><span>⚜</span></div>
+  <div class="header-footer">Sailors · Builds · Barter · Carrack · Margoria</div>
 </header>
 
 <div class="toolbar">
