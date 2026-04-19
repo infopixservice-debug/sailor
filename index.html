@@ -56,11 +56,14 @@
     z-index: 0;
     background:
       linear-gradient(180deg,
-        rgba(10,25,41,0.72) 0%,
+        rgba(10,25,41,0.70) 0%,
         rgba(15,41,66,0.78) 45%,
         rgba(10,25,41,0.92) 100%),
-      radial-gradient(ellipse at center, rgba(10,25,41,0.25) 0%, rgba(10,25,41,0.75) 100%),
-      url('assets/bg.jpg') center center / cover no-repeat fixed,
+      radial-gradient(ellipse at center, rgba(10,25,41,0.20) 0%, rgba(10,25,41,0.70) 100%),
+      image-set(
+        url('assets/bg.webp') type('image/webp'),
+        url('assets/bg.jpg') type('image/jpeg')
+      ) center center / cover no-repeat fixed,
       #0a1929;
     pointer-events: none;
   }
@@ -87,7 +90,10 @@
           rgba(10,25,41,0.78) 0%,
           rgba(15,41,66,0.82) 50%,
           rgba(10,25,41,0.94) 100%),
-        url('assets/bg.jpg') center center / cover no-repeat,
+        image-set(
+          url('assets/bg.webp') type('image/webp'),
+          url('assets/bg.jpg') type('image/jpeg')
+        ) center center / cover no-repeat,
         #0a1929;
     }
   }
