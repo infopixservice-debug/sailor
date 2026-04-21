@@ -1110,6 +1110,7 @@
     <button class="preset-chip" onclick="comparePreset('brake')">🛑 Top 4 Brake</button>
     <button class="preset-chip" onclick="comparePreset('reset')" style="background:rgba(239,68,68,0.15); border-color:#ef4444; color:#fca5a5;">✖ Reset</button>
     <button class="preset-chip" onclick="shareCompare()" title="Copia link condivisibile per Discord/guild" style="background:rgba(74,222,128,0.12); border-color:#4ade80; color:#86efac;">🔗 Share</button>
+    <button class="preset-chip" onclick="copyDiscordEmbed()" title="Copia il confronto come testo per Discord" style="background:rgba(139,92,246,0.15); border-color:#8b5cf6; color:#c4b5fd;">💬 Discord</button>
   </div>
   <div class="filters" id="compare-selects"></div>
   <div class="compare-wrap" id="compare-wrap"></div>
@@ -3303,6 +3304,65 @@ function b64urlDecode(str) {
   const pad = str.length % 4 ? '='.repeat(4 - str.length % 4) : '';
   try { return decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/') + pad))); } catch { return null; }
 }
+
+window.copyDiscordEmbed = async function() {
+  const selected = [];
+  for (let i = 0; i < 4; i++) {
+    const v = document.getElementById(`cmp-${i}`).value;
+    if (v) {
+      const s = SAILORS.find(x => x.name === v);
+      if (s) selected.push(s);
+    }
+  }
+  if (selected.length < 2) { toast('⚠️ Seleziona almeno 2 sailor', 'warn'); return; }
+
+  const raceMap = { Goblin: '🧌', Otter: '🦦', Dwarf: '⛏️', Giant: '🗿', Human: '🧑' };
+  const fmt = (n) => Number.isFinite(n) ? n.toFixed(1).replace(/\.0$/, '') : '-';
+
+  // Header
+  let out = `## ⚓ The Great Expedition Codex — Crew Compare\n`;
+  // Best values for highlight
+  const best = {};
+  ['speed', 'accel', 'turn', 'brake', 'weight'].forEach(k => {
+    best[k] = Math.max(...selected.map(s => s[k]));
+  });
+  ['smh', 'barter', 'total'].forEach(k => {
+    best[k] = Math.max(...selected.map(s => SCORES[s.name][k]));
+  });
+
+  // Table — Discord renders markdown table-like via code block
+  out += '```\n';
+  const pad = (s, w) => String(s).padEnd(w).slice(0, w);
+  const header = ['Sailor', 'Spd', 'Acc', 'Trn', 'Brk', 'Wgt', 'SMH', 'Bar', 'Tot'];
+  const widths = [16, 5, 5, 5, 5, 5, 5, 5, 5];
+  out += header.map((h, i) => pad(h, widths[i])).join('') + '\n';
+  out += header.map((_, i) => pad('-'.repeat(widths[i] - 1), widths[i])).join('') + '\n';
+  selected.forEach(s => {
+    const sc = SCORES[s.name];
+    const name = (raceMap[s.race] || '•') + ' ' + s.name;
+    const row = [
+      pad(name, widths[0]),
+      pad(fmt(s.speed) + (s.speed === best.speed ? '*' : ''), widths[1]),
+      pad(fmt(s.accel) + (s.accel === best.accel ? '*' : ''), widths[2]),
+      pad(fmt(s.turn) + (s.turn === best.turn ? '*' : ''), widths[3]),
+      pad(fmt(s.brake) + (s.brake === best.brake ? '*' : ''), widths[4]),
+      pad(fmt(s.weight) + (s.weight === best.weight ? '*' : ''), widths[5]),
+      pad(fmt(sc.smh) + (sc.smh === best.smh ? '*' : ''), widths[6]),
+      pad(fmt(sc.barter) + (sc.barter === best.barter ? '*' : ''), widths[7]),
+      pad(fmt(sc.total) + (sc.total === best.total ? '*' : ''), widths[8])
+    ];
+    out += row.join('') + '\n';
+  });
+  out += '```\n';
+  out += `*Best per column marked \\*. [Apri nel Codex](${location.origin}${location.pathname}?cmp=${b64urlEncode(JSON.stringify({ v: 1, c: selected.map(s => s.name) }))})*`;
+
+  try {
+    await navigator.clipboard.writeText(out);
+    toast(`💬 Embed copiato (${selected.length} sailor)`, 'good');
+  } catch {
+    prompt('Copia manualmente:', out);
+  }
+};
 
 window.shareCompare = async function() {
   const names = [];
