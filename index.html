@@ -1192,8 +1192,8 @@
         T4: <strong style="color: var(--brass-bright);">2.000.000</strong><br>
         T5: <strong style="color: var(--brass-bright);">5.000.000</strong><br>
         T5 Margoria: <strong style="color: var(--brass-bright);">10.000.000</strong><br>
-        <span style="color: var(--gold-accent);">T6:</span> <strong style="color: var(--brass-bright);">~50.000.000</strong><br>
-        <span style="color: var(--gold-accent);">T7:</span> <strong style="color: var(--brass-bright);">~100.000.000</strong>
+        <span style="color: var(--gold-accent);">T6:</span> <strong style="color: var(--brass-bright);">50.000.000</strong><br>
+        <span style="color: var(--gold-accent);">T7:</span> <strong style="color: var(--brass-bright);">100.000.000</strong>
       </div>
     </div>
     <div class="build-result">
@@ -1226,7 +1226,7 @@
         • Epheria Sentry Post → Calpheonian Artisan's Pearl Necklace<br>
         • Sanctuary Coastal Outpost → Top-Quality Hakinza Perfume<br>
         • Sausan Garrison Wharf → Stonetail Carrot Healthy Food Crate<br><br>
-        <em style="opacity: 0.75;">Lista verificata in-game (EU Calpheon3). Valori silver: T6 ~50M, T7 ~100M, peso 2.000 LT.</em>
+        <em style="opacity: 0.75;">Lista verificata in-game (EU Calpheon3). T6 = 50.000.000 silver, T7 = 100.000.000 silver, 2.000 LT ciascuno. Personal transaction non disponibile.</em>
       </div>
     </div>
   </div>
@@ -1391,6 +1391,14 @@
       <div id="weekly-checklist" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px;"></div>
     </div>
   </div>
+
+  <h3>⚓ Sailing Quest Tracker</h3>
+  <p style="opacity: 0.85; margin-bottom: 10px; font-size: 0.9rem;">Daily quest sailing verificate in-game (EU Calpheon3). Reset automatico. I 🕐 timer breve sono monster hunt a rotazione, i ⏳ 23h sono dailies standard.</p>
+  <div style="margin-bottom: 12px;">
+    <button onclick="resetSailingQuests()" style="background: linear-gradient(180deg,#3a1f1f,#2b1414); border-color: #7a3030; font-size: 0.82rem; padding: 6px 10px;">↺ Reset manuale</button>
+    <span id="sailing-quest-summary" style="margin-left: 12px; opacity: 0.85; font-size: 0.88rem;"></span>
+  </div>
+  <div id="sailing-quests" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; margin-bottom: 20px;"></div>
 
   <h3>🧭 First Mate Advisor (2025)</h3>
   <p style="opacity: 0.85; margin-bottom: 10px; font-size: 0.9rem;">3 First Mate disponibili — occupano 1 sailor slot, <strong>non</strong> un cabin slot, non possono essere licenziati. Solo su Carrack (4 varianti) e Panokseon.</p>
@@ -2129,6 +2137,135 @@ window.openShortcutsModal = function() {
 };
 
 // ============ TIMERS / RESET TRACKER ============
+// Sailing quests verificate in-game (EU Calpheon3) — da screenshot utente
+const SAILING_QUESTS = {
+  oceanHunt: {
+    label: '🌊 Ocean Monster Hunt',
+    color: '#60a5fa',
+    reset: 'daily',
+    items: [
+      { id: 'oh-stalker', name: 'Wanted: Ocean Stalker' },
+      { id: 'oh-hungry', name: 'Wanted: Hungry Sea Creatures' },
+      { id: 'oh-cox', name: 'Wanted: Cox Scouts in Disguise' },
+      { id: 'oh-looming', name: 'Looming Threats from the Ocean' },
+      { id: 'oh-predators', name: 'Ocean Predators' },
+      { id: 'oh-outlaws', name: 'Outlaws of the Ocean' },
+      { id: 'oh-stay', name: 'Stay Sharp!' }
+    ]
+  },
+  oldMoon: {
+    label: '🌙 Old Moon Guild',
+    color: '#c084fc',
+    reset: 'daily',
+    items: [
+      { id: 'om-candidum', name: "Old Moon Guild's Candidum Hunter" },
+      { id: 'om-nineshark', name: "Old Moon Guild's Nineshark Hunter" },
+      { id: 'om-blackrust', name: "Old Moon Guild's Black Rust Hunter" },
+      { id: 'om-young', name: "Old Moon Guild's Young ⋯", unverified: true },
+      { id: 'om-hampering', name: 'Hampering Monsters in the ⋯', unverified: true }
+    ]
+  },
+  guildSea: {
+    label: '🏴 Guild Sea',
+    color: '#fbbf24',
+    reset: 'daily',
+    items: [
+      { id: 'gs-charity', name: 'Our Guild Is Not a Charity Group' },
+      { id: 'gs-what', name: 'Do You Have What it Takes?' },
+      { id: 'gs-winwin', name: 'Win-win Situation' }
+    ]
+  },
+  trade: {
+    label: '⛵ Trade Route',
+    color: '#4ade80',
+    reset: 'daily',
+    items: [
+      { id: 'tr-velia', name: 'Through the Rough Tides: Velia' }
+    ]
+  },
+  weekly: {
+    label: '📆 Weekly Sailing',
+    color: '#f472b6',
+    reset: 'weekly',
+    items: [
+      { id: 'w-pirate', name: 'Pirate Trouble' },
+      { id: 'w-oquilla', name: "So You Wanna Live in O⋯", unverified: true }
+    ]
+  }
+};
+
+function getSailingQuestState() {
+  const dayKey = utcDayKey();
+  const weekKey = getWeekKey();
+  const raw = localStorage.getItem('bdo-sailing-quests');
+  const empty = { dayKey, weekKey, done: {} };
+  if (!raw) return empty;
+  try {
+    const s = JSON.parse(raw);
+    // Daily IDs rolled over when dayKey changes; weekly IDs rolled over when weekKey changes
+    if (!s.done) s.done = {};
+    const fresh = { dayKey, weekKey, done: {} };
+    for (const [cat, group] of Object.entries(SAILING_QUESTS)) {
+      for (const q of group.items) {
+        const keep = group.reset === 'weekly'
+          ? s.weekKey === weekKey
+          : s.dayKey === dayKey;
+        if (keep && s.done[q.id]) fresh.done[q.id] = true;
+      }
+    }
+    return fresh;
+  } catch { return empty; }
+}
+
+function saveSailingQuestState(s) { localStorage.setItem('bdo-sailing-quests', JSON.stringify(s)); }
+
+window.toggleSailingQuest = function(id) {
+  const s = getSailingQuestState();
+  s.done[id] = !s.done[id];
+  saveSailingQuestState(s);
+  renderSailingQuests();
+};
+
+window.resetSailingQuests = function() {
+  saveSailingQuestState({ dayKey: utcDayKey(), weekKey: getWeekKey(), done: {} });
+  renderSailingQuests();
+  toast('↺ Sailing quest resettate', 'good');
+};
+
+function renderSailingQuests() {
+  const box = document.getElementById('sailing-quests');
+  if (!box) return;
+  const s = getSailingQuestState();
+  let doneCount = 0, totalCount = 0;
+  const html = Object.entries(SAILING_QUESTS).map(([key, group]) => {
+    const rows = group.items.map(q => {
+      totalCount++;
+      const done = !!s.done[q.id];
+      if (done) doneCount++;
+      const unverMark = q.unverified ? ' <span title="Nome troncato — da confermare in-game" style="color:#fbbf24; font-size:0.75rem;">⚠️</span>' : '';
+      return `
+        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: ${done ? 'rgba(74,222,128,0.12)' : 'rgba(15,41,66,0.5)'}; border: 1px solid ${done ? 'rgba(74,222,128,0.45)' : 'rgba(212,165,72,0.2)'}; border-radius: 6px; cursor: pointer; font-size: 0.86rem;">
+          <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleSailingQuest('${q.id}')" style="width: 16px; height: 16px; cursor: pointer;">
+          <span style="flex: 1; ${done ? 'opacity: 0.6; text-decoration: line-through;' : ''}">${q.name}${unverMark}</span>
+        </label>
+      `;
+    }).join('');
+    const resetBadge = group.reset === 'weekly' ? '📆 Giovedì' : '⏳ 00:00 UTC';
+    return `
+      <div class="build-result" style="border-color: ${group.color}55;">
+        <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px;">
+          <div style="font-weight: 700; color: ${group.color};">${group.label}</div>
+          <div style="font-size: 0.75rem; opacity: 0.7;">${resetBadge}</div>
+        </div>
+        <div style="display: grid; gap: 6px;">${rows}</div>
+      </div>
+    `;
+  }).join('');
+  box.innerHTML = html;
+  const sum = document.getElementById('sailing-quest-summary');
+  if (sum) sum.textContent = `${doneCount}/${totalCount} completate`;
+}
+
 const FIRST_MATE_ADVICE = {
   'Proix': { tag: '🧭 Great Ocean', bestFor: 'Chi esplora Margoria / barter Oquilla.', color: '#3b82f6' },
   'Cleia': { tag: '💰 Bartering', bestFor: 'Barter main / farm Crow Coin.', color: '#fbbf24' },
@@ -2461,16 +2598,26 @@ function initTimers() {
   renderBarterRefresh();
   renderShipRefresh();
   renderWeeklyChecklist();
+  renderSailingQuests();
   renderFirstMateAdvisor();
   renderDailyCountdown();
   renderBarterCountdown();
   renderWeeklyCountdown();
+  let lastDayKey = utcDayKey();
+  let lastWeekKey = getWeekKey();
   setInterval(() => {
     renderDailyCountdown();
     renderBarterCountdown();
     renderWeeklyCountdown();
     renderBarterRefresh();
     renderShipRefresh();
+    // Re-render sailing quests only on day/week rollover
+    const dk = utcDayKey(), wk = getWeekKey();
+    if (dk !== lastDayKey || wk !== lastWeekKey) {
+      lastDayKey = dk; lastWeekKey = wk;
+      renderSailingQuests();
+      renderWeeklyChecklist();
+    }
   }, 1000);
 }
 
