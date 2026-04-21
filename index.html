@@ -2158,10 +2158,10 @@ const SAILING_QUESTS = {
     color: '#c084fc',
     reset: 'daily',
     items: [
-      { id: 'om-candidum', name: "Old Moon Guild's Candidum Hunter" },
-      { id: 'om-nineshark', name: "Old Moon Guild's Nineshark Hunter" },
-      { id: 'om-blackrust', name: "Old Moon Guild's Black Rust Hunter" },
-      { id: 'om-young', name: "Old Moon Guild's Young ⋯", unverified: true },
+      { id: 'om-candidum', name: "Old Moon Guild's Candidum Hunter", npc: 'Ravikel', where: 'Candidum — N Oquilla\'s Eye' },
+      { id: 'om-nineshark', name: "Old Moon Guild's Nineshark Hunter", npc: 'Ravikel', where: 'Nineshark — NW Oquilla\'s Eye' },
+      { id: 'om-blackrust', name: "Old Moon Guild's Black Rust Hunter", npc: 'Ravikel', where: 'Black Rust — Great Ocean' },
+      { id: 'om-young', name: "Old Moon Guild's Young Sea Monster Hunter", npc: 'Ravikel', where: 'Young sea monster — ⚠️ esclusivo con Nineshark/Candidum' },
       { id: 'om-hampering', name: 'Hampering Monsters in the ⋯', unverified: true }
     ]
   },
@@ -2171,8 +2171,8 @@ const SAILING_QUESTS = {
     reset: 'daily',
     items: [
       { id: 'gs-charity', name: 'Our Guild Is Not a Charity Group' },
-      { id: 'gs-what', name: 'Do You Have What it Takes?' },
-      { id: 'gs-winwin', name: 'Win-win Situation' }
+      { id: 'gs-what', name: 'Do You Have What it Takes?', npc: 'Soldier (Oquilla)', where: 'Hekaru — NE Oquilla\'s Eye' },
+      { id: 'gs-winwin', name: 'Win-win Situation', npc: 'Soldier (Oquilla)', where: 'Ocean Stalker — NW Oquilla\'s Eye' }
     ]
   },
   trade: {
@@ -2180,7 +2180,7 @@ const SAILING_QUESTS = {
     color: '#4ade80',
     reset: 'daily',
     items: [
-      { id: 'tr-velia', name: 'Through the Rough Tides: Velia' }
+      { id: 'tr-velia', name: 'Through the Rough Tides: Velia', npc: 'Robert (Velia)', where: 'Consegna Old Moon Trade Items' }
     ]
   },
   weekly: {
@@ -2243,10 +2243,16 @@ function renderSailingQuests() {
       const done = !!s.done[q.id];
       if (done) doneCount++;
       const unverMark = q.unverified ? ' <span title="Nome troncato — da confermare in-game" style="color:#fbbf24; font-size:0.75rem;">⚠️</span>' : '';
+      const sub = (q.npc || q.where)
+        ? `<div style="font-size: 0.72rem; opacity: 0.65; margin-top: 2px; ${done ? 'text-decoration: line-through;' : ''}">${q.npc ? `→ ${q.npc}` : ''}${q.npc && q.where ? ' · ' : ''}${q.where || ''}</div>`
+        : '';
       return `
-        <label style="display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: ${done ? 'rgba(74,222,128,0.12)' : 'rgba(15,41,66,0.5)'}; border: 1px solid ${done ? 'rgba(74,222,128,0.45)' : 'rgba(212,165,72,0.2)'}; border-radius: 6px; cursor: pointer; font-size: 0.86rem;">
-          <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleSailingQuest('${q.id}')" style="width: 16px; height: 16px; cursor: pointer;">
-          <span style="flex: 1; ${done ? 'opacity: 0.6; text-decoration: line-through;' : ''}">${q.name}${unverMark}</span>
+        <label style="display: flex; align-items: flex-start; gap: 8px; padding: 8px 10px; background: ${done ? 'rgba(74,222,128,0.12)' : 'rgba(15,41,66,0.5)'}; border: 1px solid ${done ? 'rgba(74,222,128,0.45)' : 'rgba(212,165,72,0.2)'}; border-radius: 6px; cursor: pointer; font-size: 0.86rem;">
+          <input type="checkbox" ${done ? 'checked' : ''} onchange="toggleSailingQuest('${q.id}')" style="width: 16px; height: 16px; cursor: pointer; margin-top: 2px;">
+          <div style="flex: 1; min-width: 0;">
+            <div style="${done ? 'opacity: 0.6; text-decoration: line-through;' : ''}">${q.name}${unverMark}</div>
+            ${sub}
+          </div>
         </label>
       `;
     }).join('');
