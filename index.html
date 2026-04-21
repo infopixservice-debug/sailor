@@ -1296,20 +1296,11 @@
   </div>
   <div id="crow-roi-table" style="overflow-x: auto; margin-bottom: 24px;"></div>
 
-  <h3>⛵ Sailing Mastery → Ship Stats</h3>
-  <p class="hint">Sailing Mastery scala <strong>linearmente</strong> (bonus % = Mastery × 0.01). Cap a <strong>3000 Mastery = +30%</strong> su Speed / Accel / Turn / Brake (verificato in-game 2026).</p>
-  <div style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;">
-    <div class="filter-group">
-      <label>La tua Sailing Mastery</label>
-      <input type="number" id="sailing-mastery-input" min="0" max="5000" step="10" value="2210" style="width: 140px;">
-    </div>
-    <div class="filter-group" style="flex: 1; min-width: 320px;">
-      <label>&nbsp;</label>
-      <div id="sailing-mastery-output" style="padding: 12px 14px; background: rgba(96,165,250,0.12); border-left: 3px solid #60a5fa; border-radius: 4px; line-height: 1.55;"></div>
-    </div>
-  </div>
-  <div id="sailing-mastery-gear-hint" style="background: rgba(251,191,36,0.08); border-left: 3px solid #fbbf24; padding: 10px 14px; margin-bottom: 24px; border-radius: 4px; font-size: 0.85rem; opacity: 0.9;">
-    <strong>💡 Come aggiungere Sailing Mastery:</strong> Manos Sailor Clothes (+XP) + Giath's Helmet, Boss Armor upgrades, Life Skill accessories (Loggia / Geranoa), Sealed Compass, Old Moon Guild Premium Navy Suit. Il <strong>Value Pack non</strong> aumenta Sailing Mastery.
+  <h3>🧭 Life Skill Mastery Dashboard</h3>
+  <p class="hint">Tabelle complete verificate da <a href="https://www.blackdesertfoundry.com/life-skill-mastery/" target="_blank" rel="noopener" style="color:#60a5fa;">BDFoundry (last updated 25 Jun 2025)</a>. Cap universale <strong>3000</strong>. Curva <strong>non-lineare</strong> (slope ripido 0→2000, lento 2000→3000). Input salvato nel browser.</p>
+  <div id="life-skill-dashboard" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 12px; margin-bottom: 16px;"></div>
+  <div style="background: rgba(251,191,36,0.08); border-left: 3px solid #fbbf24; padding: 10px 14px; margin-bottom: 24px; border-radius: 4px; font-size: 0.85rem; opacity: 0.9;">
+    <strong>💡 Equipment Mastery:</strong> Manos gear (PEN V cap) / Preonne accessories (DEC X cap, +250 neck/belt, +225 ring/earring) per Gathering/Fishing/Hunting/Cooking/Alchemy/Processing/Sailing. <strong>Trading, Farming, Barter NON hanno Mastery</strong> — solo livello. Il <strong>Value Pack non</strong> aumenta Mastery ma dà −10% parley bartering.
   </div>
 
   <h3>💡 Barter Tips</h3>
@@ -2867,46 +2858,214 @@ function initBarter() {
   initSailingMasteryWidget();
 }
 
-function initSailingMasteryWidget() {
-  const input = document.getElementById('sailing-mastery-input');
-  if (!input) return;
-  const saved = localStorage.getItem('bdo-sailing-mastery');
-  if (saved) input.value = saved;
-  input.addEventListener('input', () => {
-    localStorage.setItem('bdo-sailing-mastery', input.value);
-    renderSailingMastery();
-  });
-  renderSailingMastery();
+// ============ LIFE SKILL MASTERY DASHBOARD ============
+// Source: https://www.blackdesertfoundry.com/life-skill-mastery/ (25 Jun 2025)
+// Cap: 3000 across all mastery-bearing skills. Curve is piecewise:
+// slope steeper 0→2000, gentler 2000→3000. Values are breakpoints in the
+// BDFoundry table — we linearly interpolate between rows.
+// Each entry: table = [[mastery, stat1, stat2, ...], ...], cols = stat names.
+const LIFE_SKILL_MASTERY_TABLES = {
+  sailing: {
+    label: '⛵ Sailing',
+    icon: '⛵',
+    color: '#60a5fa',
+    cap: 3000,
+    cols: ['Speed', 'Accel', 'Turn', 'Brake'],
+    unit: '%',
+    table: [
+      [0, 0, 0, 0, 0], [500, 5, 5, 5, 5], [1000, 10, 10, 10, 10],
+      [1500, 15, 15, 15, 15], [2000, 20, 20, 20, 20], [2050, 20.25, 20.25, 20.25, 20.25],
+      [2100, 20.5, 20.5, 20.5, 20.5], [2210, 21.05, 21.05, 21.05, 21.05],
+      [2500, 22.5, 22.5, 22.5, 22.5], [3000, 25, 25, 25, 25]
+    ]
+  },
+  fishing: {
+    label: '🎣 Fishing',
+    icon: '🎣',
+    color: '#22d3ee',
+    cap: 3000,
+    cols: ['Prize Catch Rate'],
+    unit: '%',
+    table: [
+      [0, 0], [500, 1.25], [1000, 2.5], [1500, 3.75], [2000, 5],
+      [2500, 5.63], [3000, 6.25]
+    ],
+    extra: 'Harpooning: 200-699 Prize Catch +1 · 700-1199 +2 · 1200+ +3'
+  },
+  hunting: {
+    label: '🏹 Hunting',
+    icon: '🏹',
+    color: '#f87171',
+    cap: 3000,
+    cols: ['Butcher Drop Chance'],
+    unit: '%',
+    table: [
+      [0, 0], [500, 54], [1000, 119], [1500, 202], [2000, 300],
+      [2500, 338], [3000, 375]
+    ]
+  },
+  cooking: {
+    label: '🍳 Cooking',
+    icon: '🍳',
+    color: '#fbbf24',
+    cap: 3000,
+    cols: ['Mass Cook', 'Max Dish', 'Higher Grade', 'Imperial'],
+    unit: '%',
+    table: [
+      [0, 0, 0, 0, 0], [500, 19.98, 5.86, 1.96, 21.16],
+      [1000, 33.99, 17.81, 5.76, 67.24], [1385, 50.14, 29.86, 9.55, 101.07],
+      [1500, 60.06, 36.24, 11.56, 111.09], [2000, 100, 61.15, 19.36, 144.96],
+      [2500, 100, 68.80, 21.78, 163.09], [3000, 100, 76.45, 24.20, 181.25]
+    ]
+  },
+  alchemy: {
+    label: '⚗️ Alchemy',
+    icon: '⚗️',
+    color: '#c084fc',
+    cap: 3000,
+    cols: ['Max Products', 'Basic Byprod', 'Special Byprod', 'Rare Byprod', 'Imperial'],
+    unit: '%',
+    table: [
+      [0, 0, 0.25, 0.04, 0.01, 0], [500, 12.11, 0.78, 0.19, 0.02, 21.16],
+      [1000, 21.90, 1.56, 0.52, 0.06, 67.24], [1440, 32.19, 2.33, 0.97, 0.12, 106.40],
+      [1500, 34.57, 2.51, 1.08, 0.13, 111.09], [2000, 50, 3.57, 1.92, 0.23, 144.96],
+      [2500, 56.25, 3.73, 2.42, 0.29, 163.09], [3000, 62.50, 3.83, 2.98, 0.36, 181.25]
+    ]
+  },
+  gathering: {
+    label: '⛏️ Gathering',
+    icon: '⛏️',
+    color: '#4ade80',
+    cap: 3000,
+    cols: ['Basic Qty', 'Special Rate', 'Rare Rate'],
+    unit: '%',
+    table: [
+      [0, 0, 0, 0], [500, 64, 32, 40], [1000, 149, 74, 93],
+      [1500, 262, 131, 164], [2000, 400, 200, 250],
+      [2500, 448, 224, 280], [3000, 500, 250, 312]
+    ],
+    extra: 'Basic Rate cap +80% (reached ~100 mastery)'
+  },
+  processing: {
+    label: '⚙️ Processing',
+    icon: '⚙️',
+    color: '#94a3b8',
+    cap: 3000,
+    cols: ['Mass Process Count'],
+    unit: 'items',
+    table: [
+      [0, 10], [500, 35], [615, 41], [1000, 88], [1500, 178],
+      [2000, 250], [2500, 290], [3000, 315]
+    ]
+  },
+  training: {
+    label: '🐴 Training',
+    icon: '🐴',
+    color: '#d97706',
+    cap: 3000,
+    cols: ['Capture', 'Training EXP', 'Higher Tier Breed'],
+    unit: '%',
+    table: [
+      [0, 0, 0, 0], [500, 5.38, 7.45, 3], [1000, 12.39, 16.48, 5],
+      [1325, 17.72, 29.50, 7], [1500, 22.28, 43.03, 8],
+      [2000, 35, 75, 10], [2500, 39.38, 84.38, 12], [3000, 43.75, 93.75, 13]
+    ],
+    note: '⚠️ Training Mastery attualmente non considerata viable'
+  }
+};
+
+// Linear interpolation on lookup table
+function lookupMasteryBonus(skill, mastery) {
+  const def = LIFE_SKILL_MASTERY_TABLES[skill];
+  if (!def) return null;
+  const v = Math.max(0, Math.min(def.cap, mastery));
+  const t = def.table;
+  // Find bracketing rows
+  for (let i = 0; i < t.length - 1; i++) {
+    const a = t[i], b = t[i + 1];
+    if (v >= a[0] && v <= b[0]) {
+      const span = b[0] - a[0];
+      const frac = span === 0 ? 0 : (v - a[0]) / span;
+      return def.cols.map((_, idx) => a[1 + idx] + frac * (b[1 + idx] - a[1 + idx]));
+    }
+  }
+  // At or above cap — return last row values
+  return def.cols.map((_, idx) => t[t.length - 1][1 + idx]);
 }
 
-function renderSailingMastery() {
-  const input = document.getElementById('sailing-mastery-input');
-  const out = document.getElementById('sailing-mastery-output');
-  if (!input || !out) return;
-  const raw = parseInt(input.value, 10);
-  const v = isNaN(raw) ? 0 : Math.max(0, raw);
-  const SAILING_CAP = 3000;
-  const CAP_BONUS = (SAILING_CAP * 0.01).toFixed(0); // "30"
-  const effective = Math.min(v, SAILING_CAP);
-  const bonus = (effective * 0.01);
-  const bonusStr = bonus.toFixed(2);
-  let status = '';
-  if (v >= SAILING_CAP) {
-    const over = v - SAILING_CAP;
-    status = `<div style="margin-top: 6px; color: #4ade80;">✅ <strong>Cap raggiunto</strong> — +${CAP_BONUS}% massimo ottenibile.${over > 0 ? ` <span style="color: #fbbf24;">⚠️ ${over} Mastery oltre cap (non dà bonus extra).</span>` : ''}</div>`;
-  } else {
-    const needed = SAILING_CAP - v;
-    const pct = (v / SAILING_CAP * 100).toFixed(1);
-    status = `<div style="margin-top: 6px; opacity: 0.9;">📈 <strong>${needed}</strong> Mastery al cap (+${CAP_BONUS}%). Attuale: +${bonusStr}% · progresso ${pct}%.</div>`;
-  }
-  out.innerHTML = `
-    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 18px; font-variant-numeric: tabular-nums;">
-      <div>🚤 <strong>Speed:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
-      <div>⚡ <strong>Accel:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
-      <div>🔄 <strong>Turn:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
-      <div>🛑 <strong>Brake:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
+// User's verified Life Skill values from their in-game screenshot (2026-04-22)
+const USER_DEFAULT_MASTERY = {
+  sailing: 2210, fishing: 1475, hunting: 1560, cooking: 1385,
+  alchemy: 1440, gathering: 485, processing: 615, training: 1325
+};
+
+function getLifeSkillState() {
+  try {
+    const raw = JSON.parse(localStorage.getItem('bdo-life-skill-mastery') || 'null');
+    return raw || { ...USER_DEFAULT_MASTERY };
+  } catch { return { ...USER_DEFAULT_MASTERY }; }
+}
+
+window.setLifeSkillMastery = function(skill, value) {
+  const s = getLifeSkillState();
+  const v = parseInt(value, 10);
+  s[skill] = isNaN(v) ? 0 : Math.max(0, v);
+  localStorage.setItem('bdo-life-skill-mastery', JSON.stringify(s));
+  renderLifeSkillDashboard();
+};
+
+window.resetLifeSkillMastery = function() {
+  localStorage.removeItem('bdo-life-skill-mastery');
+  renderLifeSkillDashboard();
+  if (typeof toast === 'function') toast('↺ Life Skill Mastery reset ai valori predefiniti', 'good');
+};
+
+function initSailingMasteryWidget() {
+  renderLifeSkillDashboard();
+}
+
+function renderLifeSkillDashboard() {
+  const box = document.getElementById('life-skill-dashboard');
+  if (!box) return;
+  const state = getLifeSkillState();
+  const html = Object.entries(LIFE_SKILL_MASTERY_TABLES).map(([key, def]) => {
+    const current = state[key] ?? 0;
+    const bonuses = lookupMasteryBonus(key, current) || [];
+    const pct = Math.min(100, (current / def.cap) * 100);
+    const atCap = current >= def.cap;
+    const deltaNext50 = Math.min(def.cap, Math.ceil((current + 1) / 50) * 50);
+    const nextBonuses = lookupMasteryBonus(key, deltaNext50) || [];
+    const statsRows = def.cols.map((name, i) => {
+      const now = bonuses[i] ?? 0;
+      const fmt = def.unit === 'items' ? Math.round(now) : now.toFixed(2);
+      return `<div style="display:flex; justify-content:space-between; font-size:0.82rem; padding:2px 0;">
+        <span style="opacity:0.8;">${name}</span>
+        <span style="color:${def.color}; font-weight:600; font-variant-numeric: tabular-nums;">+${fmt}${def.unit === 'items' ? '' : def.unit}</span>
+      </div>`;
+    }).join('');
+    const statusLine = atCap
+      ? `<div style="color:#4ade80; font-size:0.78rem; margin-top:6px;">✅ Cap raggiunto${current > def.cap ? ` <span style="color:#fbbf24;">(${current - def.cap} sopra cap)</span>` : ''}</div>`
+      : `<div style="font-size:0.78rem; margin-top:6px; opacity:0.75;">📈 ${def.cap - current} al cap · next +50 = ${deltaNext50}</div>`;
+    return `
+      <div style="background: rgba(15,41,66,0.5); border: 1px solid ${def.color}55; border-left: 4px solid ${def.color}; border-radius: 6px; padding: 10px 12px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+          <strong style="color:${def.color}; font-size:0.95rem;">${def.label}</strong>
+          <input type="number" min="0" max="5000" step="10" value="${current}" onchange="setLifeSkillMastery('${key}', this.value)" style="width: 90px; text-align: right; padding: 3px 6px; background: rgba(15,41,66,0.8); color: #e8ddc3; border: 1px solid ${def.color}55; border-radius: 3px; font-variant-numeric: tabular-nums;">
+        </div>
+        <div style="height: 4px; background: rgba(212,165,72,0.15); border-radius: 2px; overflow: hidden; margin-bottom: 8px;">
+          <div style="height: 100%; width: ${pct}%; background: ${def.color}; transition: width 0.25s;"></div>
+        </div>
+        ${statsRows}
+        ${statusLine}
+        ${def.extra ? `<div style="font-size:0.72rem; opacity:0.7; margin-top:4px;">${def.extra}</div>` : ''}
+        ${def.note ? `<div style="font-size:0.72rem; color:#fbbf24; margin-top:4px;">${def.note}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+  box.innerHTML = html + `
+    <div style="background: rgba(94,94,94,0.15); border: 1px dashed rgba(212,165,72,0.3); border-radius: 6px; padding: 10px 12px; display: flex; align-items: center; justify-content: center;">
+      <button onclick="resetLifeSkillMastery()" style="padding: 8px 14px; background: rgba(239,68,68,0.15); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; cursor: pointer; font-size: 0.85rem;">↺ Reset ai valori default (screenshot 22-Apr-2026)</button>
     </div>
-    ${status}
   `;
 }
 
