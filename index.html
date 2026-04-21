@@ -16,7 +16,10 @@
 <meta name="twitter:title" content="📜 The Great Expedition Codex">
 <meta name="twitter:description" content="BDO Sailing & Barter Companion per la gilda">
 <meta name="twitter:image" content="https://bdo-expedition-codex.netlify.app/assets/og-preview.jpg">
-<meta name="theme-color" content="#d4a548">
+<meta name="theme-color" content="#0a1929">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" type="image/png" href="/assets/favicon.png">
+<link rel="apple-touch-icon" href="/assets/icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700;800&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
@@ -1106,6 +1109,7 @@
     <button class="preset-chip" onclick="comparePreset('turn')">↪️ Top 4 Turn</button>
     <button class="preset-chip" onclick="comparePreset('brake')">🛑 Top 4 Brake</button>
     <button class="preset-chip" onclick="comparePreset('reset')" style="background:rgba(239,68,68,0.15); border-color:#ef4444; color:#fca5a5;">✖ Reset</button>
+    <button class="preset-chip" onclick="shareCompare()" title="Copia link condivisibile per Discord/guild" style="background:rgba(74,222,128,0.12); border-color:#4ade80; color:#86efac;">🔗 Share</button>
   </div>
   <div class="filters" id="compare-selects"></div>
   <div class="compare-wrap" id="compare-wrap"></div>
@@ -2025,6 +2029,7 @@ function init() {
   initCarrack();
   initTimers();
   initKeyboard();
+  applySharedCompare();
 }
 
 // ============ MODAL & TOAST ============
@@ -3290,6 +3295,62 @@ function renderCompareSelects() {
   wrap.innerHTML = html;
 }
 
+// URL-safe base64 encode/decode (no padding issues)
+function b64urlEncode(str) {
+  return btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64urlDecode(str) {
+  const pad = str.length % 4 ? '='.repeat(4 - str.length % 4) : '';
+  try { return decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/') + pad))); } catch { return null; }
+}
+
+window.shareCompare = async function() {
+  const names = [];
+  for (let i = 0; i < 4; i++) {
+    const v = document.getElementById(`cmp-${i}`).value;
+    if (v) names.push(v);
+  }
+  if (names.length < 2) { toast('⚠️ Seleziona almeno 2 sailor prima di condividere', 'warn'); return; }
+  // Compact: short codes = first 3 letters lowercased
+  const payload = { v: 1, c: names };
+  const encoded = b64urlEncode(JSON.stringify(payload));
+  const url = `${location.origin}${location.pathname}?cmp=${encoded}`;
+  try {
+    await navigator.clipboard.writeText(url);
+    toast(`🔗 Link copiato (${names.length} sailor)`, 'good');
+  } catch {
+    prompt('Copia questo link:', url);
+  }
+};
+
+function applySharedCompare() {
+  const params = new URLSearchParams(location.search);
+  const cmp = params.get('cmp');
+  if (!cmp) return;
+  const decoded = b64urlDecode(cmp);
+  if (!decoded) return;
+  try {
+    const payload = JSON.parse(decoded);
+    if (payload.v !== 1 || !Array.isArray(payload.c)) return;
+    // Find the sailor names in SAILORS to validate
+    const valid = payload.c.filter(n => SAILORS.some(s => s.name === n)).slice(0, 4);
+    if (!valid.length) return;
+    // Switch to comparator tab
+    const tab = document.querySelector('[data-tab="comparator"]');
+    if (tab) tab.click();
+    setTimeout(() => {
+      for (let i = 0; i < 4; i++) {
+        const el = document.getElementById(`cmp-${i}`);
+        if (el) el.value = valid[i] || '';
+      }
+      renderCompare();
+      toast(`🔗 ${valid.length} sailor caricati dal link`, 'good');
+      // Clean URL without reloading
+      history.replaceState({}, '', location.pathname);
+    }, 100);
+  } catch {}
+}
+
 window.comparePreset = function(goal) {
   if (goal === 'reset') {
     for (let i = 0; i < 4; i++) document.getElementById(`cmp-${i}`).value = '';
@@ -3364,6 +3425,15 @@ window.renderCompare = function() {
 };
 
 init();
+
+// ============ SERVICE WORKER (PWA) ============
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('SW registration failed:', err);
+    });
+  });
+}
 </script>
 </body>
 </html>

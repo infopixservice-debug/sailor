@@ -1,0 +1,33 @@
+{
+  "name": "The Great Expedition Codex",
+  "short_name": "Sailing Codex",
+  "description": "BDO Sailing & Barter Companion — per capitani del Great Ocean",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a1929",
+  "theme_color": "#0a1929",
+  "lang": "it",
+  "categories": ["games", "utilities"],
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/icon-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}
