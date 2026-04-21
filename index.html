@@ -1296,6 +1296,22 @@
   </div>
   <div id="crow-roi-table" style="overflow-x: auto; margin-bottom: 24px;"></div>
 
+  <h3>⛵ Sailing Mastery → Ship Stats</h3>
+  <p class="hint">Sailing Mastery scala <strong>linearmente</strong> (bonus % = Mastery × 0.01). Cap effettivo a <strong>2000 Mastery = +20%</strong> su Speed / Accel / Turn / Brake. Fonte: BDFoundry Sailing Guide + GrumpyG (2026).</p>
+  <div style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap; margin-bottom: 10px;">
+    <div class="filter-group">
+      <label>La tua Sailing Mastery</label>
+      <input type="number" id="sailing-mastery-input" min="0" max="5000" step="10" value="2210" style="width: 140px;">
+    </div>
+    <div class="filter-group" style="flex: 1; min-width: 320px;">
+      <label>&nbsp;</label>
+      <div id="sailing-mastery-output" style="padding: 12px 14px; background: rgba(96,165,250,0.12); border-left: 3px solid #60a5fa; border-radius: 4px; line-height: 1.55;"></div>
+    </div>
+  </div>
+  <div id="sailing-mastery-gear-hint" style="background: rgba(251,191,36,0.08); border-left: 3px solid #fbbf24; padding: 10px 14px; margin-bottom: 24px; border-radius: 4px; font-size: 0.85rem; opacity: 0.9;">
+    <strong>💡 Come aggiungere Sailing Mastery:</strong> Manos Sailor Clothes (+XP) + Giath's Helmet, Boss Armor upgrades, Life Skill accessories (Loggia / Geranoa), Sealed Compass, Old Moon Guild Premium Navy Suit. Il <strong>Value Pack non</strong> aumenta Sailing Mastery.
+  </div>
+
   <h3>💡 Barter Tips</h3>
   <div class="feedback">
     <strong>🎯 Strategia di base:</strong><br>
@@ -2848,6 +2864,48 @@ function initBarter() {
   updateMasteryInfo();
   renderBarterTable();
   renderCrowRoi();
+  initSailingMasteryWidget();
+}
+
+function initSailingMasteryWidget() {
+  const input = document.getElementById('sailing-mastery-input');
+  if (!input) return;
+  const saved = localStorage.getItem('bdo-sailing-mastery');
+  if (saved) input.value = saved;
+  input.addEventListener('input', () => {
+    localStorage.setItem('bdo-sailing-mastery', input.value);
+    renderSailingMastery();
+  });
+  renderSailingMastery();
+}
+
+function renderSailingMastery() {
+  const input = document.getElementById('sailing-mastery-input');
+  const out = document.getElementById('sailing-mastery-output');
+  if (!input || !out) return;
+  const raw = parseInt(input.value, 10);
+  const v = isNaN(raw) ? 0 : Math.max(0, raw);
+  const SAILING_CAP = 2000;
+  const effective = Math.min(v, SAILING_CAP);
+  const bonus = (effective * 0.01);
+  const bonusStr = bonus.toFixed(2);
+  let status = '';
+  if (v >= SAILING_CAP) {
+    const over = v - SAILING_CAP;
+    status = `<div style="margin-top: 6px; color: #4ade80;">✅ <strong>Cap raggiunto</strong> — +20% massimo ottenibile.${over > 0 ? ` <span style="color: #fbbf24;">⚠️ ${over} Mastery oltre cap (non dà bonus extra).</span>` : ''}</div>`;
+  } else {
+    const needed = SAILING_CAP - v;
+    status = `<div style="margin-top: 6px; opacity: 0.85;">📈 <strong>${needed}</strong> Mastery al cap (+20%). Attuale: +${bonusStr}% su tutti i ship stats.</div>`;
+  }
+  out.innerHTML = `
+    <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 18px; font-variant-numeric: tabular-nums;">
+      <div>🚤 <strong>Speed:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
+      <div>⚡ <strong>Accel:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
+      <div>🔄 <strong>Turn:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
+      <div>🛑 <strong>Brake:</strong> <span style="color: #4ade80;">+${bonusStr}%</span></div>
+    </div>
+    ${status}
+  `;
 }
 
 function updateMasteryInfo() {
