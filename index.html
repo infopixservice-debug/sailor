@@ -1313,13 +1313,13 @@
 <!-- ============ GUIDE ============ -->
 <div class="panel" id="panel-timers">
   <h2>⏱️ Daily & Weekly Reset Tracker</h2>
-  <p class="hint">Sistema basato sulle meccaniche BDO attuali (Feb 2025): Barter Refresh con cooldown, reset giornaliero a mezzanotte UTC, reset settimanale giovedì.</p>
+  <p class="hint">Server EU/NA condividono orario UTC. Dailies generiche reset <strong>00:00 UTC</strong>, barter points reset <strong>06:00 UTC</strong>, weekly reset <strong>Giovedì 00:00 UTC</strong>. Orario locale mostrato in CET/CEST.</p>
 
   <div class="feedback warn" style="margin-bottom: 16px;">
-    ⚠️ <strong>Importante:</strong> Parley NON si rigenera passivamente — cap 1.000.000, serve premere manualmente "Barter Refresh". Il vecchio sistema "5 barter/day" è stato rimpiazzato.
+    ⚠️ <strong>Parley:</strong> cap 1.000.000, non si rigenera passivamente. Serve premere manualmente "Barter Refresh". Post-patch 16 Apr 2026 i costi parley sono stati ribilanciati (trade esistenti più economici, T6/T7 più cari).
   </div>
 
-  <h3>🔄 Barter Refresh Tracker</h3>
+  <h3>🔄 Barter Refresh Tracker (trade goods)</h3>
   <div id="barter-refresh-box" class="build-result" style="margin-bottom: 16px;">
     <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
       <div>
@@ -1330,7 +1330,8 @@
         </select>
       </div>
       <div>
-        <button onclick="useRefresh()" id="btn-refresh">🔁 Ho usato un Refresh</button>
+        <button onclick="useRefresh()" id="btn-refresh">🔁 Refresh (50 pts)</button>
+        <button onclick="useInstantTradeRefresh()" id="btn-refresh-instant" title="Bypassa cooldown, costa 50 punti extra">⚡ Instant (bypass CD)</button>
         <button onclick="resetBarterRefresh()" title="Reset manuale — usa solo se cambi server" style="background: linear-gradient(180deg,#3a1f1f,#2b1414); border-color: #7a3030;">↺ Reset</button>
       </div>
     </div>
@@ -1339,15 +1340,35 @@
     </div>
   </div>
 
-  <h3>📅 Daily Reset (mezzanotte UTC)</h3>
-  <div class="build-result" style="margin-bottom: 16px;">
-    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset: <strong id="daily-countdown" style="color: var(--brass-bright);">--:--:--</strong></div>
-    <div style="font-size: 0.85rem; opacity: 0.8;">I refresh giornalieri e il budget punti si resettano a questo momento.</div>
+  <h3>⚓ Ship Material Refresh Tracker</h3>
+  <div id="ship-refresh-box" class="build-result" style="margin-bottom: 16px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+      <div style="font-size: 0.88rem; opacity: 0.85;">Track separato per ship material (Graphite/Timber/ecc). 2/day, cooldown 2h, budget 10 pts/refresh. Instant: 40 pts.</div>
+      <div>
+        <button onclick="useShipRefresh()" id="btn-ship-refresh">🔁 Refresh (10 pts)</button>
+        <button onclick="useInstantShipRefresh()" id="btn-ship-refresh-instant" title="Bypassa cooldown, costa 40 punti">⚡ Instant (bypass CD)</button>
+      </div>
+    </div>
+    <div id="ship-refresh-status" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px;">
+      <!-- popolato da JS -->
+    </div>
   </div>
 
-  <h3>📆 Weekly Reset (Giovedì mezzanotte server)</h3>
+  <h3>🪙 Barter Points Reset (06:00 UTC)</h3>
   <div class="build-result" style="margin-bottom: 16px;">
-    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset settimanale: <strong id="weekly-countdown" style="color: var(--brass-bright);">--d --h</strong></div>
+    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset barter: <strong id="barter-countdown" style="color: var(--brass-bright);">--:--:--</strong> <span id="barter-countdown-local" style="opacity: 0.75; font-weight: normal; font-size: 0.88rem;"></span></div>
+    <div style="font-size: 0.85rem; opacity: 0.8;">Refresh points budget (100/150) e daily bonus barter routes si resettano alle 06:00 UTC.</div>
+  </div>
+
+  <h3>📅 Daily Reset Generico (00:00 UTC)</h3>
+  <div class="build-result" style="margin-bottom: 16px;">
+    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset: <strong id="daily-countdown" style="color: var(--brass-bright);">--:--:--</strong> <span id="daily-countdown-local" style="opacity: 0.75; font-weight: normal; font-size: 0.88rem;"></span></div>
+    <div style="font-size: 0.85rem; opacity: 0.8;">Attendance, dailies generiche, boss blitz.</div>
+  </div>
+
+  <h3>📆 Weekly Reset (Giovedì 00:00 UTC)</h3>
+  <div class="build-result" style="margin-bottom: 16px;">
+    <div style="font-size: 0.95rem; margin-bottom: 8px;">⏳ Prossimo reset settimanale: <strong id="weekly-countdown" style="color: var(--brass-bright);">--d --h</strong> <span id="weekly-countdown-local" style="opacity: 0.75; font-weight: normal; font-size: 0.88rem;"></span></div>
     <div style="margin-top: 12px;">
       <div style="font-weight: 600; margin-bottom: 8px; color: var(--parchment);">Checklist settimanale (resetta automaticamente):</div>
       <div id="weekly-checklist" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px;"></div>
@@ -2111,20 +2132,46 @@ function getBarterConfig() {
 
 function getBarterState() {
   const raw = localStorage.getItem('bdo-barter-state');
-  if (!raw) return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() };
+  if (!raw) return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: barterDayKey() };
   try {
     const s = JSON.parse(raw);
-    if (s.dayKey !== utcDayKey()) return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() };
+    if (s.dayKey !== barterDayKey()) return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: barterDayKey() };
     return s;
-  } catch { return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() }; }
+  } catch { return { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: barterDayKey() }; }
 }
 
 function saveBarterState(s) { localStorage.setItem('bdo-barter-state', JSON.stringify(s)); }
+
+// Barter cycle anchored at 06:00 UTC (NA/EU). Returns ISO date of the most recent 06:00 UTC crossover.
+function barterDayKey() {
+  const d = new Date();
+  const anchor = new Date(d);
+  if (d.getUTCHours() < 6) anchor.setUTCDate(anchor.getUTCDate() - 1);
+  return `${anchor.getUTCFullYear()}-${anchor.getUTCMonth()+1}-${anchor.getUTCDate()}`;
+}
 
 function utcDayKey() {
   const d = new Date();
   return `${d.getUTCFullYear()}-${d.getUTCMonth()+1}-${d.getUTCDate()}`;
 }
+
+// Ship material refresh: 2/day, 2h cooldown, 10 pts per refresh, instant = 40 pts
+function getShipRefreshConfig() {
+  return { maxRefresh: 2, costPts: 10, instantPts: 40, cooldownMs: 2 * 60 * 60 * 1000 };
+}
+
+function getShipRefreshState() {
+  const raw = localStorage.getItem('bdo-ship-refresh-state');
+  const empty = { used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: barterDayKey() };
+  if (!raw) return empty;
+  try {
+    const s = JSON.parse(raw);
+    if (s.dayKey !== barterDayKey()) return empty;
+    return s;
+  } catch { return empty; }
+}
+
+function saveShipRefreshState(s) { localStorage.setItem('bdo-ship-refresh-state', JSON.stringify(s)); }
 
 function useRefresh() {
   const cfg = getBarterConfig();
@@ -2133,7 +2180,7 @@ function useRefresh() {
   if (s.used >= cfg.maxRefresh) { toast('⚠️ Hai già usato tutti i refresh giornalieri'); return; }
   if (s.lastRefresh && (now - s.lastRefresh) < cfg.cooldownMs) {
     const left = cfg.cooldownMs - (now - s.lastRefresh);
-    toast(`⏱️ Cooldown attivo: ${formatDuration(left)} rimasti`);
+    toast(`⏱️ Cooldown attivo: ${formatDuration(left)} rimasti — usa Instant per bypassare`);
     return;
   }
   s.used += 1;
@@ -2141,13 +2188,85 @@ function useRefresh() {
   s.pointsUsed += 50;
   saveBarterState(s);
   renderBarterRefresh();
-  toast('✅ Refresh registrato');
+  toast('✅ Refresh registrato (-50 pts)');
+}
+
+function useInstantTradeRefresh() {
+  const cfg = getBarterConfig();
+  const s = getBarterState();
+  if (s.used >= cfg.maxRefresh) { toast('⚠️ Hai già usato tutti i refresh giornalieri'); return; }
+  if (s.pointsUsed + 50 > cfg.maxPoints) { toast('⚠️ Punti insufficienti per instant refresh (50)'); return; }
+  s.used += 1;
+  s.lastRefresh = Date.now();
+  s.pointsUsed += 50;
+  saveBarterState(s);
+  renderBarterRefresh();
+  toast('⚡ Instant refresh usato (-50 pts, bypass CD)');
+}
+
+function useShipRefresh() {
+  const cfg = getShipRefreshConfig();
+  const s = getShipRefreshState();
+  const now = Date.now();
+  if (s.used >= cfg.maxRefresh) { toast('⚠️ Hai già usato tutti i ship refresh'); return; }
+  if (s.lastRefresh && (now - s.lastRefresh) < cfg.cooldownMs) {
+    const left = cfg.cooldownMs - (now - s.lastRefresh);
+    toast(`⏱️ Cooldown ship: ${formatDuration(left)} rimasti`);
+    return;
+  }
+  s.used += 1;
+  s.lastRefresh = now;
+  s.pointsUsed += cfg.costPts;
+  saveShipRefreshState(s);
+  renderShipRefresh();
+  toast('✅ Ship refresh registrato (-10 pts)');
+}
+
+function useInstantShipRefresh() {
+  const cfg = getShipRefreshConfig();
+  const s = getShipRefreshState();
+  if (s.used >= cfg.maxRefresh) { toast('⚠️ Hai già usato tutti i ship refresh'); return; }
+  s.used += 1;
+  s.lastRefresh = Date.now();
+  s.pointsUsed += cfg.instantPts;
+  saveShipRefreshState(s);
+  renderShipRefresh();
+  toast('⚡ Instant ship refresh (-40 pts, bypass CD)');
 }
 
 function resetBarterRefresh() {
-  saveBarterState({ used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: utcDayKey() });
+  saveBarterState({ used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: barterDayKey() });
+  saveShipRefreshState({ used: 0, lastRefresh: 0, pointsUsed: 0, dayKey: barterDayKey() });
   renderBarterRefresh();
-  toast('↺ Tracker refresh resettato');
+  renderShipRefresh();
+  toast('↺ Tracker refresh resettati');
+}
+
+function renderShipRefresh() {
+  const cfg = getShipRefreshConfig();
+  const s = getShipRefreshState();
+  const now = Date.now();
+  const cdLeft = s.lastRefresh ? Math.max(0, cfg.cooldownMs - (now - s.lastRefresh)) : 0;
+  const box = document.getElementById('ship-refresh-status');
+  if (!box) return;
+  box.innerHTML = `
+    <div style="padding: 10px; background: rgba(59,130,246,0.12); border: 1px solid rgba(59,130,246,0.4); border-radius: 8px;">
+      <div style="font-size: 0.82rem; opacity: 0.85;">Ship refresh usati</div>
+      <div style="font-size: 1.4rem; font-weight: 700; color: var(--brass-bright);">${s.used} / ${cfg.maxRefresh}</div>
+    </div>
+    <div style="padding: 10px; background: rgba(251,191,36,0.12); border: 1px solid rgba(251,191,36,0.4); border-radius: 8px;">
+      <div style="font-size: 0.82rem; opacity: 0.85;">Cooldown ship</div>
+      <div style="font-size: 1.4rem; font-weight: 700; color: ${cdLeft > 0 ? '#ef4444' : '#4ade80'};">${cdLeft > 0 ? formatDuration(cdLeft) : 'Pronto'}</div>
+    </div>
+    <div style="padding: 10px; background: rgba(96,165,250,0.12); border: 1px solid rgba(96,165,250,0.4); border-radius: 8px;">
+      <div style="font-size: 0.82rem; opacity: 0.85;">Punti ship spesi</div>
+      <div style="font-size: 1.4rem; font-weight: 700; color: var(--parchment);">${s.pointsUsed}</div>
+    </div>
+  `;
+  const btn = document.getElementById('btn-ship-refresh');
+  if (btn) btn.disabled = (s.used >= cfg.maxRefresh) || cdLeft > 0;
+  const btnI = document.getElementById('btn-ship-refresh-instant');
+  if (btnI) btnI.disabled = (s.used >= cfg.maxRefresh);
 }
 
 function renderBarterRefresh() {
@@ -2185,6 +2304,18 @@ function formatDuration(ms) {
   return `${m}m ${sec}s`;
 }
 
+// Returns local-time label for a UTC Date, including IT abbreviation (CET/CEST)
+function localLabel(d) {
+  const opts = { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Rome' };
+  const hm = new Intl.DateTimeFormat('it-IT', opts).format(d);
+  // Detect DST by comparing offset in January vs target date
+  const jan = new Date(d.getUTCFullYear(), 0, 1);
+  const jul = new Date(d.getUTCFullYear(), 6, 1);
+  const stdOffset = Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+  const isDst = d.getTimezoneOffset() < stdOffset;
+  return `${hm} ${isDst ? 'CEST' : 'CET'}`;
+}
+
 function renderDailyCountdown() {
   const now = new Date();
   const next = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
@@ -2194,6 +2325,29 @@ function renderDailyCountdown() {
   const s = Math.floor((diff % 60000) / 1000);
   const el = document.getElementById('daily-countdown');
   if (el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const local = document.getElementById('daily-countdown-local');
+  if (local) local.textContent = `(${localLabel(next)})`;
+}
+
+function renderBarterCountdown() {
+  const now = new Date();
+  // Next 06:00 UTC crossover
+  const next = new Date(now);
+  next.setUTCMinutes(0, 0, 0);
+  if (now.getUTCHours() < 6) {
+    next.setUTCHours(6);
+  } else {
+    next.setUTCDate(next.getUTCDate() + 1);
+    next.setUTCHours(6);
+  }
+  const diff = next - now;
+  const h = Math.floor(diff / 3600000);
+  const m = Math.floor((diff % 3600000) / 60000);
+  const s = Math.floor((diff % 60000) / 1000);
+  const el = document.getElementById('barter-countdown');
+  if (el) el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  const local = document.getElementById('barter-countdown-local');
+  if (local) local.textContent = `(${localLabel(next)})`;
 }
 
 function renderWeeklyCountdown() {
@@ -2211,6 +2365,8 @@ function renderWeeklyCountdown() {
   const m = Math.floor((diff % 3600000) / 60000);
   const el = document.getElementById('weekly-countdown');
   if (el) el.textContent = `${d}g ${h}h ${m}m`;
+  const local = document.getElementById('weekly-countdown-local');
+  if (local) local.textContent = `(Giovedì ${localLabel(next)})`;
 }
 
 function getWeeklyState() {
@@ -2285,14 +2441,18 @@ function initTimers() {
     });
   }
   renderBarterRefresh();
+  renderShipRefresh();
   renderWeeklyChecklist();
   renderFirstMateAdvisor();
   renderDailyCountdown();
+  renderBarterCountdown();
   renderWeeklyCountdown();
   setInterval(() => {
     renderDailyCountdown();
+    renderBarterCountdown();
     renderWeeklyCountdown();
     renderBarterRefresh();
+    renderShipRefresh();
   }, 1000);
 }
 
