@@ -1280,7 +1280,22 @@
     </div>
   </div>
   <p style="opacity: 0.75; font-size: 0.85rem; margin-top: 8px;">⚠️ Rate base: 1 Crow Coin ≈ 81.318 silver (calcolato con Memory Fragment @ 44.195 su Market Price 1.910.000). I prezzi oscillano — verifica sul marketplace prima di grandi conversioni.</p>
-  
+
+  <h3>🪙 Crow Coin ROI — Ravinia / Rebinia Shop</h3>
+  <p class="hint">42 item verificati in-game (NPC Shop 2026-04). Inserisci il prezzo di mercato corrente per vedere silver/CC live. I valori sono salvati nel browser.</p>
+  <div style="display: flex; gap: 14px; align-items: center; flex-wrap: wrap; margin-bottom: 10px;">
+    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer;">
+      <input type="checkbox" id="crow-roi-hide-ship" onchange="renderCrowRoi()">
+      Nascondi ship upgrade (10k+ CC)
+    </label>
+    <label style="display: flex; align-items: center; gap: 6px; font-size: 0.88rem; cursor: pointer;">
+      <input type="checkbox" id="crow-roi-only-positive" onchange="renderCrowRoi()">
+      Solo sopra baseline (100k silver/CC)
+    </label>
+    <button onclick="resetCrowPrices()" style="padding: 6px 12px; background: rgba(239,68,68,0.18); color: #fca5a5; border: 1px solid rgba(239,68,68,0.4); border-radius: 4px; cursor: pointer; font-size: 0.85rem;">↺ Reset prezzi</button>
+  </div>
+  <div id="crow-roi-table" style="overflow-x: auto; margin-bottom: 24px;"></div>
+
   <h3>💡 Barter Tips</h3>
   <div class="feedback">
     <strong>🎯 Strategia di base:</strong><br>
@@ -2832,6 +2847,7 @@ function initBarter() {
   
   updateMasteryInfo();
   renderBarterTable();
+  renderCrowRoi();
 }
 
 function updateMasteryInfo() {
@@ -2894,10 +2910,173 @@ window.calcCrow = function() {
   const coins = parseInt(document.getElementById('crow-input').value) || 0;
   const silver = coins * 81318;
   const t5 = Math.floor(coins / 10);
-  document.getElementById('crow-result').innerHTML = 
+  document.getElementById('crow-result').innerHTML =
     `💰 <strong>${silver.toLocaleString('it')}</strong> silver | ` +
     `Equivalente a ~<strong>${t5}</strong> T5 Barter exchanges`;
 };
+
+// ============ CROW COIN ROI (Ravinia/Rebinia shop) ============
+// Baseline: Crow Coin Coupon = 10 CC → 1.000.000 silver = 100.000 silver/CC
+const CROW_COIN_BASELINE = 100000;
+
+// Verified in-game (EU Calpheon3, screenshot shop 2026-04)
+const RAVINIA_SHOP = [
+  // BASELINE reference
+  { id: 'crow-coupon', name: 'Crow Coin Coupon', cc: 10, fixedSilver: 1000000, cat: 'baseline', note: 'Reference: 100k silver/CC fisso' },
+  // RESELL — barter-goods convertibili al marketplace
+  { id: 'tidal-black-stone', name: 'Tidal Black Stone', cc: 10, cat: 'resell' },
+  { id: 'moon-scale-plywood', name: 'Moon Scale Plywood', cc: 20, cat: 'resell' },
+  { id: 'bright-reef', name: 'Bright Reef Piece', cc: 40, cat: 'resell' },
+  { id: 'enhanced-plywood', name: 'Enhanced Island Tree Coated Plywood', cc: 50, cat: 'resell' },
+  { id: 'moon-flax-fabric', name: 'Moon Vein Flax Fabric', cc: 50, cat: 'resell' },
+  { id: 'seaweed-stalk', name: 'Seaweed Stalk', cc: 100, cat: 'resell' },
+  { id: 'tide-timber', name: 'Tide-Dyed Standardized Timber Square', cc: 100, cat: 'resell' },
+  { id: 'deep-tide-timber', name: 'Deep Tide-Dyed Standardized Timber Square', cc: 100, cat: 'resell' },
+  { id: 'mandragora-essence', name: 'Mandragora Essence', cc: 100, cat: 'resell' },
+  { id: 'deep-sea-glue', name: 'Deep Sea Memory Filled Glue', cc: 140, cat: 'resell' },
+  { id: 'cobalt-ingot', name: 'Cobalt Ingot', cc: 150, cat: 'resell' },
+  { id: 'great-ocean-iron', name: 'Great Ocean Dark Iron', cc: 160, cat: 'resell' },
+  { id: 'khan-scale', name: "Khan's Scale", cc: 200, cat: 'resell' },
+  { id: 'pearl-crystal', name: 'Pure Pearl Crystal', cc: 250, cat: 'resell' },
+  { id: 'ruddy-manganese', name: 'Ruddy Manganese Nodule', cc: 250, cat: 'resell' },
+  { id: 'starlight-hardener', name: 'Starlight Hardener', cc: 250, cat: 'resell' },
+  { id: 'starlight-emulsifier', name: 'Starlight Emulsifier', cc: 250, cat: 'resell' },
+  { id: 'violent-wave-plywood', name: 'Violent Wave Plywood', cc: 350, cat: 'resell' },
+  { id: 'delicately-polished', name: 'Delicately Polished Support', cc: 350, cat: 'resell' },
+  { id: 'wave-residue-adhesive', name: 'Wave Residue Adhesive', cc: 350, cat: 'resell' },
+  { id: 'luminous-cobalt', name: 'Luminous Cobalt Ingot', cc: 500, cat: 'resell' },
+  { id: 'brilliant-pearl', name: 'Brilliant Pearl Shard', cc: 500, cat: 'resell' },
+  { id: 'brilliant-rock-salt', name: 'Brilliant Rock Salt Ingot', cc: 500, cat: 'resell' },
+  { id: 'khan-tendon', name: "Khan's Tendon", cc: 500, cat: 'resell' },
+  { id: 'glue-deep-waves', name: 'Glue With Traces of Deep Waves', cc: 500, cat: 'resell' },
+  { id: 'tear-ocean', name: 'Tear of the Ocean', cc: 500, cat: 'resell' },
+  { id: 'oquilla-flower', name: "Oquilla's Flower", cc: 1000, cat: 'resell' },
+  // UTILITY — uso in-game, non rivendibili
+  { id: 'moss-remover', name: "Ravinia's Moss Remover", cc: 100, cat: 'utility', note: 'Rimuove barnacle/moss debuff nave' },
+  { id: 'cox-parley-beginner', name: "Cox Pirates' Artifact (Parley Beginner)", cc: 150, cat: 'utility', note: 'Riduce parley cost barter' },
+  { id: 'cox-combat', name: "Cox Pirates' Artifact (Combat)", cc: 150, cat: 'utility', note: 'Uso PvE sea monster' },
+  { id: 'sealed-compass', name: 'Sealed Compass (7 Days)', cc: 400, cat: 'utility', note: 'Navigazione / sailor tracking 7gg' },
+  { id: 'cox-parley-expert', name: "Cox Pirates' Artifact (Parley Expert)", cc: 500, cat: 'utility', note: 'Riduce parley cost barter (più forte)' },
+  // SHIP UPGRADE — gate craft Carrack/Panokseon
+  { id: 'carrack-toro-plating', name: 'Epheria Carrack: Toro Plating', cc: 10000, cat: 'ship-upgrade' },
+  { id: 'carrack-toro-cannon', name: 'Epheria Carrack: Toro Cannon', cc: 10000, cat: 'ship-upgrade' },
+  { id: 'carrack-toro-sail', name: 'Epheria Carrack: Toro Sail', cc: 10000, cat: 'ship-upgrade' },
+  { id: 'carrack-toro-figurehead', name: 'Epheria Carrack: Toro Figurehead', cc: 10000, cat: 'ship-upgrade' },
+  { id: 'panokseon-haemo-plating', name: "Panokseon: Haemo's Plating", cc: 10000, cat: 'ship-upgrade' },
+  { id: 'panokseon-haemo-cannon', name: "Panokseon: Haemo's Cannon", cc: 10000, cat: 'ship-upgrade' },
+  { id: 'panokseon-haemo-sail', name: "Panokseon: Haemo's Sail", cc: 10000, cat: 'ship-upgrade' },
+  { id: 'panokseon-haemo-figurehead', name: "Panokseon: Haemo's Figurehead", cc: 10000, cat: 'ship-upgrade' },
+  { id: 'oquilla-tear', name: "Oquilla's Tear", cc: 100000, cat: 'ship-upgrade', note: 'Gate Panokseon' }
+];
+
+function crowPrices() {
+  try { return JSON.parse(localStorage.getItem('bdo-crow-prices') || '{}'); } catch { return {}; }
+}
+
+window.setCrowPrice = function(id, price) {
+  const p = crowPrices();
+  const v = String(price).trim();
+  if (v === '' || isNaN(+v) || +v <= 0) delete p[id];
+  else p[id] = +v;
+  localStorage.setItem('bdo-crow-prices', JSON.stringify(p));
+  renderCrowRoi();
+};
+
+window.resetCrowPrices = function() {
+  localStorage.removeItem('bdo-crow-prices');
+  renderCrowRoi();
+  if (typeof toast === 'function') toast('↺ Prezzi Crow Coin resettati', 'good');
+};
+
+function renderCrowRoi() {
+  const el = document.getElementById('crow-roi-table');
+  if (!el) return;
+  const prices = crowPrices();
+  const hideShip = document.getElementById('crow-roi-hide-ship')?.checked;
+  const onlyPos = document.getElementById('crow-roi-only-positive')?.checked;
+
+  const rows = RAVINIA_SHOP.map(it => {
+    let mp = prices[it.id];
+    let sPerCC = null;
+    if (it.cat === 'baseline' && it.fixedSilver) {
+      sPerCC = Math.round(it.fixedSilver / it.cc);
+      mp = it.fixedSilver;
+    } else if (it.cat === 'resell' && mp > 0) {
+      sPerCC = Math.round(mp / it.cc);
+    }
+    return { ...it, mp, sPerCC };
+  });
+
+  const catOrder = { baseline: 0, resell: 1, utility: 2, 'ship-upgrade': 3 };
+  rows.sort((a, b) => {
+    const ca = catOrder[a.cat] ?? 9, cb = catOrder[b.cat] ?? 9;
+    if (ca !== cb) return ca - cb;
+    // within resell: silver/CC desc (nulls last); otherwise cc asc
+    if (a.cat === 'resell') {
+      const av = a.sPerCC ?? -1, bv = b.sPerCC ?? -1;
+      if (av !== bv) return bv - av;
+    }
+    return a.cc - b.cc;
+  });
+
+  let filtered = rows;
+  if (hideShip) filtered = filtered.filter(r => r.cat !== 'ship-upgrade');
+  if (onlyPos) filtered = filtered.filter(r => r.sPerCC != null && r.sPerCC >= CROW_COIN_BASELINE);
+
+  const catBadge = {
+    baseline: '<span style="background:rgba(251,191,36,0.2); color:#fbbf24; padding:2px 6px; border-radius:3px; font-size:0.72rem;">🎯 Baseline</span>',
+    resell: '<span style="background:rgba(74,222,128,0.15); color:#4ade80; padding:2px 6px; border-radius:3px; font-size:0.72rem;">🔁 Resell</span>',
+    utility: '<span style="background:rgba(96,165,250,0.15); color:#60a5fa; padding:2px 6px; border-radius:3px; font-size:0.72rem;">🛠️ Utility</span>',
+    'ship-upgrade': '<span style="background:rgba(192,132,252,0.18); color:#c084fc; padding:2px 6px; border-radius:3px; font-size:0.72rem;">🚢 Ship Gate</span>'
+  };
+
+  const bannerHtml = `
+    <div style="background: rgba(251,191,36,0.1); border-left: 3px solid #fbbf24; padding: 10px 14px; margin-bottom: 12px; border-radius: 4px; font-size: 0.88rem;">
+      🎯 <strong>Baseline:</strong> Crow Coin Coupon = 10 CC → 1.000.000 silver = <strong>100.000 silver/CC</strong>. Sotto questa soglia conviene comprare coupon (ROI garantito).
+    </div>`;
+
+  const tableHtml = `
+    <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem; min-width: 720px;">
+      <thead>
+        <tr style="border-bottom: 2px solid rgba(212,165,72,0.35); color: #f4c96b;">
+          <th style="padding: 8px; text-align: left;">Item</th>
+          <th style="padding: 8px; text-align: right;">Costo CC</th>
+          <th style="padding: 8px; text-align: right;">Prezzo mercato (silver)</th>
+          <th style="padding: 8px; text-align: right;">silver/CC</th>
+          <th style="padding: 8px; text-align: left;">Categoria</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${filtered.map(r => {
+          const verdict = r.sPerCC == null ? '<span style="opacity:0.45;">—</span>'
+            : r.sPerCC >= CROW_COIN_BASELINE ? `<span style="color:#4ade80; font-weight:700;">${r.sPerCC.toLocaleString('it-IT')}</span> ✅`
+            : `<span style="color:#f87171;">${r.sPerCC.toLocaleString('it-IT')}</span> ⚠️`;
+          const canEdit = r.cat === 'resell';
+          const priceCell = r.cat === 'baseline'
+            ? `<span style="color:#fbbf24; font-weight:600;">${r.fixedSilver.toLocaleString('it-IT')}</span>`
+            : canEdit
+              ? `<input type="number" min="0" step="10000" value="${r.mp ?? ''}" onchange="setCrowPrice('${r.id}', this.value)" placeholder="–" style="width: 140px; text-align: right; padding: 4px 6px; background: rgba(15,41,66,0.6); color: #e8ddc3; border: 1px solid rgba(212,165,72,0.25); border-radius: 3px;">`
+              : '<span style="opacity:0.45;">—</span>';
+          return `
+            <tr style="border-bottom: 1px solid rgba(212,165,72,0.12);">
+              <td style="padding: 8px;">
+                <div>${r.name}</div>
+                ${r.note ? `<div style="font-size:0.72rem; opacity:0.65; margin-top:2px;">${r.note}</div>` : ''}
+              </td>
+              <td style="padding: 8px; text-align: right; font-variant-numeric: tabular-nums;">${r.cc.toLocaleString('it-IT')}</td>
+              <td style="padding: 8px; text-align: right;">${priceCell}</td>
+              <td style="padding: 8px; text-align: right; font-variant-numeric: tabular-nums;">${verdict}</td>
+              <td style="padding: 8px;">${catBadge[r.cat] || r.cat}</td>
+            </tr>
+          `;
+        }).join('')}
+        ${filtered.length === 0 ? '<tr><td colspan="5" style="padding: 16px; text-align: center; opacity: 0.7;">Nessun item corrisponde ai filtri.</td></tr>' : ''}
+      </tbody>
+    </table>`;
+
+  el.innerHTML = bannerHtml + tableHtml;
+}
+
 
 function renderGuide() {
   // Ships
