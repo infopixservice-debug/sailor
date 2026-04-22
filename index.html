@@ -2126,6 +2126,7 @@ function init() {
   initTimers();
   initKeyboard();
   applySharedCompare();
+  applySharedRoll();
 }
 
 // ============ MODAL & TOAST ============
@@ -4032,6 +4033,7 @@ async function loadSavedSailors() {
           </div>
           <div style="display:flex; gap: 6px; margin-top: 8px;">
             <button onclick="loadSailor('${key.replace(/'/g, "\\'")}')" style="flex: 1; font-size: 0.85rem; padding: 6px;">📂 Carica</button>
+            <button onclick="shareSavedSailor('${key.replace(/'/g, "\\'")}')" title="Copia link condivisibile per Discord/guild" style="background: linear-gradient(180deg, #166534, #052e16); color: #86efac; font-size: 0.85rem; padding: 6px 8px;">🔗</button>
             <button onclick="deleteSailor('${key.replace(/'/g, "\\'")}')" style="background: linear-gradient(180deg, #7f1d1d, #450a0a); color: var(--parchment); font-size: 0.85rem; padding: 6px;">🗑️</button>
           </div>
         </div>
@@ -4186,19 +4188,102 @@ function applySharedCompare() {
     // Find the sailor names in SAILORS to validate
     const valid = payload.c.filter(n => SAILORS.some(s => s.name === n)).slice(0, 4);
     if (!valid.length) return;
-    // Switch to comparator tab
-    const tab = document.querySelector('[data-tab="comparator"]');
-    if (tab) tab.click();
+    // Switch to comparator tab (only if no roll-share queued, which takes priority)
+    const hasRoll = params.get('roll');
+    if (!hasRoll) {
+      const tab = document.querySelector('[data-tab="comparator"]');
+      if (tab) tab.click();
+    }
     setTimeout(() => {
       for (let i = 0; i < 4; i++) {
         const el = document.getElementById(`cmp-${i}`);
         if (el) el.value = valid[i] || '';
       }
       renderCompare();
-      toast(`🔗 ${valid.length} sailor caricati dal link`, 'good');
-      // Clean URL without reloading
-      history.replaceState({}, '', location.pathname);
+      if (!hasRoll) toast(`🔗 ${valid.length} sailor caricati dal link`, 'good');
+      // Clean URL only if no roll-share also pending (it cleans after itself)
+      if (!hasRoll) history.replaceState({}, '', location.pathname);
     }, 100);
+  } catch {}
+}
+
+// ============ SHAREABLE ROLL TRACKER (Tier A #3) ============
+// Encodes a saved sailor's rolled stats to URL — share to Discord/guild.
+// Format: { v:1, t:type, n:name, vals:{ speed:{2:x...}, ... } }
+window.shareSavedSailor = async function(key) {
+  try {
+    const r = await storage.get(key);
+    if (!r) { toast('⚠️ Sailor non trovato', 'warn'); return; }
+    const d = JSON.parse(r.value);
+    if (!d.type || !d.values) { toast('⚠️ Dati incompleti', 'warn'); return; }
+    const payload = { v: 1, t: d.type, n: d.name || '', vals: d.values };
+    const encoded = b64urlEncode(JSON.stringify(payload));
+    const url = `${location.origin}${location.pathname}?roll=${encoded}`;
+    if (url.length > 1900) { toast('⚠️ Link troppo lungo per essere condiviso', 'warn'); return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast(`🔗 Link tracker copiato (${d.name || d.type})`, 'good');
+    } catch {
+      prompt('Copia questo link:', url);
+    }
+  } catch (e) {
+    toast('Errore share: ' + e.message, 'bad');
+  }
+};
+
+function applySharedRoll() {
+  const params = new URLSearchParams(location.search);
+  const roll = params.get('roll');
+  if (!roll) return;
+  const decoded = b64urlDecode(roll);
+  if (!decoded) return;
+  try {
+    const payload = JSON.parse(decoded);
+    if (payload.v !== 1 || !payload.t || !payload.vals) return;
+    // Validate sailor type exists in dataset
+    const sailor = SAILORS.find(s => s.name === payload.t);
+    if (!sailor) { toast('⚠️ Sailor type non riconosciuto nel link', 'warn'); return; }
+    // Sanitize values: only STAT_KEYS keys, only levels 2-10, only numeric values
+    const cleanVals = {};
+    STAT_KEYS.forEach(k => {
+      cleanVals[k] = {};
+      const src = payload.vals[k] || {};
+      for (let lv = 2; lv <= 10; lv++) {
+        const v = src[lv];
+        if (v != null && v !== '' && !isNaN(parseFloat(v))) cleanVals[k][lv] = String(v);
+      }
+    });
+    const sanitizedName = String(payload.n || sailor.name).slice(0, 40).replace(/[<>]/g, '');
+    // Switch to tracker tab
+    const tab = document.querySelector('[data-tab="tracker"]');
+    if (tab) tab.click();
+    setTimeout(() => {
+      currentTracker.type = payload.t;
+      currentTracker.name = sanitizedName;
+      currentTracker.values = cleanVals;
+      const nameEl = document.getElementById('tracker-name');
+      if (nameEl) nameEl.value = sanitizedName;
+      const typeEl = document.getElementById('tracker-type');
+      if (typeEl) typeEl.value = payload.t;
+      renderTracker();
+      // Friendly banner with import option
+      const filledCount = STAT_KEYS.reduce((sum, k) => sum + Object.keys(cleanVals[k]).length, 0);
+      openModal(`
+        <h2 style="color: var(--brass-bright); margin-top: 0;">🔗 Sailor condiviso ricevuto</h2>
+        <p style="line-height: 1.6;">
+          Qualcuno ti ha condiviso il tracker di <strong>${sanitizedName}</strong>
+          <span style="opacity: 0.7;">(${payload.t})</span> con <strong>${filledCount}</strong> stat compilate.
+        </p>
+        <p style="opacity: 0.78; font-size: 0.9rem;">
+          I valori sono già caricati nel Roll Tracker. Puoi <strong>visualizzarli</strong>, oppure salvarli nel tuo roster.
+        </p>
+        <div style="display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap;">
+          <button onclick="saveTracker(); closeModal();" style="background: linear-gradient(180deg, #4ade80, #166534); color: var(--ink); font-weight: bold;">⬇️ Importa nei miei salvati</button>
+          <button onclick="closeModal();">👁️ Solo visualizza</button>
+        </div>
+      `);
+      history.replaceState({}, '', location.pathname);
+    }, 150);
   } catch {}
 }
 
