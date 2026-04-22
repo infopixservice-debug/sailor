@@ -84,8 +84,10 @@
     animation: corsairFloat 7s ease-in-out infinite;
   }
   @keyframes corsairFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+    0%, 100% { transform: translateY(0) rotate(-0.6deg); }
+    25%      { transform: translateY(-6px) rotate(0.4deg); }
+    50%      { transform: translateY(-10px) rotate(0.8deg); }
+    75%      { transform: translateY(-6px) rotate(0.2deg); }
   }
   @media (max-width: 1400px) {
     .corsair-mascot { opacity: 0.55; height: 60vh; }
@@ -104,6 +106,18 @@
   }
   .waves::before { bottom: 18%; }
   .waves::after { bottom: 38%; animation-delay: -7s; opacity: 0.5; }
+  /* Third wave layer for extra depth */
+  .waves-extra {
+    position: fixed;
+    left: -50%; right: -50%;
+    bottom: 8%;
+    height: 80px;
+    background: radial-gradient(ellipse at center, rgba(244,201,107,0.06) 0%, transparent 75%);
+    animation: wave 22s infinite ease-in-out -3s;
+    pointer-events: none;
+    z-index: 0;
+  }
+  @media (max-width: 900px) { .waves-extra { display: none; } }
   @keyframes wave {
     0%, 100% { transform: translateX(0) scaleY(1); }
     50% { transform: translateX(5%) scaleY(1.3); }
@@ -909,6 +923,47 @@
     font-weight: 600;
     margin-left: 6px;
   }
+  /* Live header ticker — always-visible reset countdowns */
+  .live-ticker {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    padding: 8px 14px;
+    margin-bottom: 12px;
+    background: linear-gradient(180deg, rgba(15,41,66,0.85), rgba(10,25,41,0.92));
+    border: 1px solid rgba(212,165,72,0.4);
+    border-radius: 6px;
+    box-shadow: inset 0 1px 0 rgba(244,201,107,0.15), 0 2px 8px rgba(0,0,0,0.3);
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.86rem;
+    color: var(--parchment);
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .live-ticker:hover { border-color: var(--brass-bright); box-shadow: inset 0 1px 0 rgba(244,201,107,0.2), 0 2px 12px rgba(244,201,107,0.18); }
+  .ticker-segment {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 14px;
+    border-right: 1px solid rgba(212,165,72,0.18);
+  }
+  .ticker-segment:last-child { border-right: none; }
+  .ticker-icon { font-size: 1rem; }
+  .ticker-label { color: var(--brass-bright); font-family: 'Cinzel', serif; font-size: 0.78rem; letter-spacing: 0.5px; }
+  .ticker-value { color: var(--parchment); font-weight: 600; font-variant-numeric: tabular-nums; min-width: 70px; }
+  .ticker-value.urgent { color: var(--red); animation: tickerPulse 1.5s infinite; }
+  .ticker-value.soon { color: var(--brass-bright); }
+  @keyframes tickerPulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.55; }
+  }
+  @media (max-width: 700px) {
+    .ticker-segment { padding: 2px 8px; font-size: 0.78rem; }
+    .ticker-label { display: none; }
+  }
   /* Toolbar */
   .toolbar {
     display: flex;
@@ -1061,6 +1116,14 @@
   <div class="header-footer">Sailors · Builds · Barter · Carrack · Margoria</div>
   <div class="author-credit">⚓ Forged by <strong>Greamory</strong> · Gilda <strong>Lithium</strong> ⚓</div>
 </header>
+
+<div class="waves-extra" aria-hidden="true"></div>
+
+<div class="live-ticker" onclick="document.querySelector('[data-tab=&quot;timers&quot;]').click()" title="Click → vai a Daily/Weekly per dettagli completi">
+  <div class="ticker-segment"><span class="ticker-icon">🌅</span><span class="ticker-label">DAILY</span><span class="ticker-value" id="ticker-daily">--:--:--</span></div>
+  <div class="ticker-segment"><span class="ticker-icon">🏴</span><span class="ticker-label">BARTER</span><span class="ticker-value" id="ticker-barter">--:--:--</span></div>
+  <div class="ticker-segment"><span class="ticker-icon">📅</span><span class="ticker-label">WEEKLY</span><span class="ticker-value" id="ticker-weekly">--g --h</span></div>
+</div>
 
 <div class="toolbar">
   <button onclick="exportData()" title="Esporta tutti i dati salvati in un file JSON">📥 Esporta backup</button>
@@ -2859,6 +2922,49 @@ function renderWeeklyCountdown() {
   if (local) local.textContent = `(Giovedì ${localLabel(next)})`;
 }
 
+// ============ HEADER LIVE TICKER (Step 3 — always-visible reset countdowns) ============
+function renderHeaderTicker() {
+  const now = new Date();
+  // Daily reset (00:00 UTC)
+  const nextDaily = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1, 0, 0, 0));
+  // Barter reset (06:00 UTC)
+  const nextBarter = new Date(now);
+  nextBarter.setUTCMinutes(0, 0, 0);
+  if (now.getUTCHours() < 6) nextBarter.setUTCHours(6);
+  else { nextBarter.setUTCDate(nextBarter.getUTCDate() + 1); nextBarter.setUTCHours(6); }
+  // Weekly reset (Thursday 00:00 UTC)
+  const day = now.getUTCDay();
+  let daysToThu = (4 - day + 7) % 7;
+  if (daysToThu === 0) daysToThu = 7;
+  const nextWeekly = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + daysToThu, 0, 0, 0));
+
+  const fmt = (target) => {
+    const diff = Math.max(0, target - now);
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    const s = Math.floor((diff % 60000) / 1000);
+    return { text: `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`, diff };
+  };
+  const fmtLong = (target) => {
+    const diff = Math.max(0, target - now);
+    const d = Math.floor(diff / 86400000);
+    const h = Math.floor((diff % 86400000) / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    return { text: `${d}g ${h}h ${m}m`, diff };
+  };
+  const apply = (id, info) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = info.text;
+    el.classList.remove('urgent', 'soon');
+    if (info.diff < 600000) el.classList.add('urgent');       // < 10 min
+    else if (info.diff < 3600000) el.classList.add('soon');   // < 1 h
+  };
+  apply('ticker-daily',  fmt(nextDaily));
+  apply('ticker-barter', fmt(nextBarter));
+  apply('ticker-weekly', fmtLong(nextWeekly));
+}
+
 function getWeeklyState() {
   const weekKey = getWeekKey();
   const raw = localStorage.getItem('bdo-weekly-state');
@@ -2938,12 +3044,14 @@ function initTimers() {
   renderDailyCountdown();
   renderBarterCountdown();
   renderWeeklyCountdown();
+  renderHeaderTicker();
   let lastDayKey = utcDayKey();
   let lastWeekKey = getWeekKey();
   setInterval(() => {
     renderDailyCountdown();
     renderBarterCountdown();
     renderWeeklyCountdown();
+    renderHeaderTicker();
     renderBarterRefresh();
     renderShipRefresh();
     // Re-render sailing quests only on day/week rollover
