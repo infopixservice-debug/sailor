@@ -425,6 +425,30 @@
     box-shadow: 0 4px 10px rgba(212,165,72,0.5);
   }
   button:active { transform: translateY(1px); }
+  /* Accessibility — focus-visible per keyboard nav (UI/UX Pro Max Phase 2) */
+  button:focus-visible,
+  a:focus-visible,
+  [onclick]:focus-visible,
+  [role="button"]:focus-visible,
+  input[type="checkbox"]:focus-visible,
+  label:focus-visible,
+  summary:focus-visible {
+    outline: 2px solid var(--brass-bright);
+    outline-offset: 2px;
+    box-shadow: 0 0 8px rgba(244,201,107,0.5);
+    border-radius: 4px;
+  }
+  /* Reduced motion — rispetta preferenza OS (UI/UX Pro Max Phase 2) */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
   /* Sailor cards grid */
   .sailor-grid {
     display: grid;
