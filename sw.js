@@ -1,7 +1,16 @@
 // Service worker — The Great Expedition Codex
 // Strategy: network-first for HTML (freshness), cache-first for assets (speed).
+// v2 (2026-04-22): full sailor avatar coverage + post-message update flow.
 
-const CACHE_VERSION = 'sailing-codex-v1';
+const CACHE_VERSION = 'sailing-codex-v2';
+
+const SAILOR_AVATARS = [
+  'Ambitious', 'Born in the Sea', 'Calculating', 'Confident', 'Curious',
+  'Diligent', 'Dreaming of a Full Haul', 'Enamored', 'Experienced', 'Honest',
+  'Innocent', 'Powerful', 'Quick', 'Quick-Witted', 'Realistic',
+  'Smart', 'Strong', 'Tenacious', 'Tough', 'Treasure Seeking'
+].map((n) => '/assets/sailors/' + encodeURIComponent(n) + '.webp');
+
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -11,10 +20,13 @@ const STATIC_ASSETS = [
   '/assets/mappa.webp',
   '/assets/mappa.jpg',
   '/assets/Corsair.webp',
+  '/assets/Corsair.png',
   '/assets/og-preview.jpg',
   '/assets/icon-192.png',
   '/assets/icon-512.png',
-  '/assets/favicon.png'
+  '/assets/icon-512-maskable.png',
+  '/assets/favicon.png',
+  ...SAILOR_AVATARS
 ];
 
 self.addEventListener('install', (event) => {
@@ -32,6 +44,13 @@ self.addEventListener('activate', (event) => {
       Promise.all(keys.filter((k) => k !== CACHE_VERSION).map((k) => caches.delete(k)))
     ).then(() => self.clients.claim())
   );
+});
+
+// Allow page to trigger immediate activation after update detected
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {

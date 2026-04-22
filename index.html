@@ -1001,6 +1001,7 @@
   <button onclick="document.getElementById('import-file').click()" title="Importa un backup JSON">📤 Importa backup</button>
   <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
   <button onclick="openShortcutsModal()" title="Scorciatoie tastiera">⌨️ Scorciatoie</button>
+  <button id="pwa-install-btn" onclick="installPWA()" title="Installa come app (offline-ready)" style="display:none; background: linear-gradient(180deg, #166534, #052e16); color: #86efac;">⚓ Installa app</button>
 </div>
 
 <div class="tabs">
@@ -4365,11 +4366,59 @@ init();
 // ============ SERVICE WORKER (PWA) ============
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch((err) => {
+    navigator.serviceWorker.register('/sw.js').then((reg) => {
+      // Detect new SW waiting → notify user
+      function notifyUpdate(worker) {
+        if (!worker) return;
+        const showUpdateToast = () => {
+          const t = document.getElementById('toast');
+          if (!t) return;
+          t.className = 'toast show good';
+          t.innerHTML = `🔄 Nuova versione disponibile — <button onclick="location.reload()" style="margin-left:8px; padding:3px 10px; background:rgba(244,201,107,0.25); border:1px solid var(--brass); color:var(--brass-bright); border-radius:3px; cursor:pointer; font-family:inherit; font-size:0.85rem;">Aggiorna</button>`;
+          // Keep toast visible until user acts
+          clearTimeout(window._toastTimer);
+        };
+        if (worker.state === 'installed' && navigator.serviceWorker.controller) {
+          showUpdateToast();
+        } else {
+          worker.addEventListener('statechange', () => {
+            if (worker.state === 'installed' && navigator.serviceWorker.controller) showUpdateToast();
+          });
+        }
+      }
+      if (reg.waiting) notifyUpdate(reg.waiting);
+      reg.addEventListener('updatefound', () => notifyUpdate(reg.installing));
+    }).catch((err) => {
       console.warn('SW registration failed:', err);
     });
   });
 }
+
+// ============ PWA INSTALL PROMPT (discoverability) ============
+let _installPromptEvent = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  _installPromptEvent = e;
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = '';
+});
+window.installPWA = async function() {
+  if (!_installPromptEvent) {
+    toast('💡 Per installare: usa il menu del browser → "Installa app"', 'good');
+    return;
+  }
+  _installPromptEvent.prompt();
+  const { outcome } = await _installPromptEvent.userChoice;
+  _installPromptEvent = null;
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'none';
+  if (outcome === 'accepted') toast('⚓ App installata — buon viaggio capitano!', 'good');
+};
+window.addEventListener('appinstalled', () => {
+  const btn = document.getElementById('pwa-install-btn');
+  if (btn) btn.style.display = 'none';
+  toast('⚓ App installata', 'good');
+});
 </script>
 </body>
 </html>
