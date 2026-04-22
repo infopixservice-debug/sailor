@@ -4581,8 +4581,9 @@ window.renderCompare = function() {
   ['smh', 'barter', 'total'].forEach(k => {
     best[k] = Math.max(...selected.map(s => SCORES[s.name][k]));
   });
-  
-  wrap.innerHTML = selected.map(s => {
+
+  const radarSvg = buildRadarChart(selected);
+  wrap.innerHTML = radarSvg + '<div class="compare-cols-wrap" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; margin-top: 18px;">' + selected.map(s => {
     const sc = SCORES[s.name];
     const row = (label, key, val, isScore) => {
       const compareVal = isScore ? sc[key] : val;
@@ -4615,8 +4616,96 @@ window.renderCompare = function() {
         </div>
       </div>
     `;
-  }).join('');
+  }).join('') + '</div>';
 };
+
+// ============ RADAR CHART (Step 2 — visual sailor comparison) ============
+const RADAR_COLORS = ['#f4c96b', '#60a5fa', '#4ade80', '#f472b6'];
+function buildRadarChart(selected) {
+  // 6 axes — normalize each against absolute max in SAILORS dataset
+  const axes = [
+    { key: 'speed',  label: '⚡ Speed',  max: Math.max(...SAILORS.map(s => s.speed))  || 100, type: 'raw' },
+    { key: 'accel',  label: '🚀 Accel',  max: Math.max(...SAILORS.map(s => s.accel))  || 100, type: 'raw' },
+    { key: 'turn',   label: '↪️ Turn',   max: Math.max(...SAILORS.map(s => s.turn))   || 100, type: 'raw' },
+    { key: 'brake',  label: '🛑 Brake',  max: Math.max(...SAILORS.map(s => s.brake))  || 100, type: 'raw' },
+    { key: 'smh',    label: '🌊 SMH',    max: Math.max(...SAILORS.map(s => SCORES[s.name].smh)),    type: 'score' },
+    { key: 'barter', label: '💰 Barter', max: Math.max(...SAILORS.map(s => SCORES[s.name].barter)), type: 'score' }
+  ];
+  const N = axes.length;
+  const cx = 230, cy = 230, R = 165; // canvas 460×460, chart radius 165
+  // Vertex coords for axis i: angle = -π/2 + i * 2π/N (start at top)
+  const vertex = (i, r) => {
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / N;
+    return [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  };
+  // Concentric grid rings (4 levels: 25/50/75/100%)
+  let gridHtml = '';
+  for (let lvl = 1; lvl <= 4; lvl++) {
+    const r = (R * lvl) / 4;
+    const pts = Array.from({ length: N }, (_, i) => vertex(i, r).join(',')).join(' ');
+    gridHtml += `<polygon points="${pts}" fill="none" stroke="rgba(212,165,72,${lvl === 4 ? 0.5 : 0.18})" stroke-width="${lvl === 4 ? 1.5 : 1}" />`;
+  }
+  // Axis spokes
+  let spokesHtml = '';
+  for (let i = 0; i < N; i++) {
+    const [x, y] = vertex(i, R);
+    spokesHtml += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(212,165,72,0.25)" stroke-width="1" />`;
+  }
+  // Axis labels (slightly outside)
+  let labelsHtml = '';
+  for (let i = 0; i < N; i++) {
+    const [x, y] = vertex(i, R + 24);
+    const a = -Math.PI / 2 + (i * 2 * Math.PI) / N;
+    let anchor = 'middle';
+    if (Math.cos(a) > 0.3) anchor = 'start';
+    else if (Math.cos(a) < -0.3) anchor = 'end';
+    labelsHtml += `<text x="${x}" y="${y + 4}" fill="#f4c96b" font-size="13" font-family="Cinzel, serif" font-weight="600" text-anchor="${anchor}">${axes[i].label}</text>`;
+  }
+  // Polygons per sailor
+  let polysHtml = '';
+  let legendHtml = '';
+  selected.forEach((s, idx) => {
+    const color = RADAR_COLORS[idx % RADAR_COLORS.length];
+    const sc = SCORES[s.name];
+    const pts = axes.map((ax, i) => {
+      const raw = ax.type === 'score' ? sc[ax.key] : s[ax.key];
+      const ratio = ax.max > 0 ? Math.max(0, Math.min(1, raw / ax.max)) : 0;
+      return vertex(i, R * ratio).join(',');
+    }).join(' ');
+    polysHtml += `<polygon points="${pts}" fill="${color}" fill-opacity="0.18" stroke="${color}" stroke-width="2.5" stroke-linejoin="round" style="filter: drop-shadow(0 0 4px ${color}66);">
+      <title>${s.name}</title>
+    </polygon>`;
+    // Vertex dots for emphasis
+    axes.forEach((ax, i) => {
+      const raw = ax.type === 'score' ? sc[ax.key] : s[ax.key];
+      const ratio = ax.max > 0 ? Math.max(0, Math.min(1, raw / ax.max)) : 0;
+      const [x, y] = vertex(i, R * ratio);
+      polysHtml += `<circle cx="${x}" cy="${y}" r="3.5" fill="${color}" stroke="#0a1929" stroke-width="1" />`;
+    });
+    legendHtml += `<div style="display:flex; align-items:center; gap:6px; font-size:0.88rem;"><span style="display:inline-block; width:14px; height:14px; background:${color}; border-radius:2px; box-shadow: 0 0 6px ${color}88;"></span><strong style="color:${color};">${s.name}</strong></div>`;
+  });
+  // Center marker
+  const centerHtml = `<circle cx="${cx}" cy="${cy}" r="3" fill="rgba(244,201,107,0.6)" />`;
+  return `
+    <div style="background: linear-gradient(180deg, rgba(15,41,66,0.5), rgba(10,25,41,0.7)); border: 1px solid rgba(212,165,72,0.3); border-radius: 8px; padding: 14px; margin-bottom: 8px;">
+      <div style="display:flex; flex-wrap:wrap; gap:14px; align-items:center; margin-bottom:8px;">
+        <h3 style="margin:0; color:var(--brass-bright); font-family:'Cinzel', serif; font-size:1.05rem;">📊 Radar Comparison</h3>
+        <div style="display:flex; gap:14px; flex-wrap:wrap;">${legendHtml}</div>
+      </div>
+      <div style="text-align:center;">
+        <svg viewBox="0 0 460 460" style="width:100%; max-width:460px; height:auto; display:block; margin:0 auto;" role="img" aria-label="Radar chart comparing selected sailors">
+          ${gridHtml}
+          ${spokesHtml}
+          ${polysHtml}
+          ${centerHtml}
+          ${labelsHtml}
+        </svg>
+      </div>
+      <div style="text-align:center; font-size:0.78rem; opacity:0.65; margin-top:6px; font-style:italic;">
+        Ogni asse normalizzato sul max assoluto del dataset (sailor migliore = 100% raggio).
+      </div>
+    </div>`;
+}
 
 init();
 
