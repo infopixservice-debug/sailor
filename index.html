@@ -923,6 +923,62 @@
     font-weight: 600;
     margin-left: 6px;
   }
+  /* ============ ONBOARDING TOUR (Step 4) ============ */
+  #tour-overlay {
+    position: fixed; inset: 0;
+    z-index: 99990;
+    display: none;
+    pointer-events: auto;
+  }
+  #tour-overlay.active { display: block; }
+  #tour-spotlight {
+    position: absolute;
+    border-radius: 8px;
+    box-shadow: 0 0 0 9999px rgba(5,15,28,0.78), 0 0 24px rgba(244,201,107,0.6) inset, 0 0 0 2px var(--brass-bright);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+  }
+  #tour-popup {
+    position: absolute;
+    width: min(380px, 90vw);
+    background: linear-gradient(180deg, var(--bg-panel), var(--bg-ocean));
+    border: 2px solid var(--brass);
+    border-radius: 8px;
+    padding: 18px 20px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 30px rgba(244,201,107,0.25);
+    color: var(--parchment);
+    transition: top 0.4s cubic-bezier(0.4, 0, 0.2, 1), left 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  #tour-popup.center {
+    top: 50% !important; left: 50% !important;
+    transform: translate(-50%, -50%);
+  }
+  .tour-title {
+    font-family: 'Cinzel', serif;
+    color: var(--brass-bright);
+    font-size: 1.15rem;
+    margin-bottom: 8px;
+    font-weight: 700;
+  }
+  .tour-body { font-size: 0.92rem; line-height: 1.55; opacity: 0.92; margin-bottom: 14px; }
+  .tour-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .tour-dots { display: flex; gap: 6px; }
+  .tour-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(244,201,107,0.3); transition: background 0.2s, transform 0.2s; }
+  .tour-dot.active { background: var(--brass-bright); transform: scale(1.4); }
+  .tour-buttons { display: flex; gap: 8px; }
+  .tour-btn {
+    padding: 6px 14px;
+    font-size: 0.85rem;
+    font-family: inherit;
+    border: 1px solid var(--brass);
+    border-radius: 4px;
+    cursor: pointer;
+    background: linear-gradient(180deg, var(--wood), var(--wood-dark));
+    color: var(--parchment);
+  }
+  .tour-btn:hover { color: var(--brass-bright); }
+  .tour-btn.primary { background: linear-gradient(180deg, var(--brass), #8b5a2b); color: var(--ink); font-weight: 700; }
+  .tour-btn.skip { background: transparent; border-color: rgba(244,228,200,0.3); opacity: 0.7; }
   /* Live header ticker — always-visible reset countdowns */
   .live-ticker {
     display: flex;
@@ -1130,10 +1186,27 @@
   <button onclick="document.getElementById('import-file').click()" title="Importa un backup JSON">📤 Importa backup</button>
   <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
   <button onclick="openShortcutsModal()" title="Scorciatoie tastiera">⌨️ Scorciatoie</button>
+  <button onclick="startTour(true)" title="Tour guidato del Codex (5 step)">🎓 Tour</button>
   <button onclick="openAchievementsModal()" title="Achievement della tua spedizione" style="background: linear-gradient(180deg, #4a3818, #1a1408); color: var(--brass-bright);">🏆 Achievements <span id="ach-counter-badge" class="ach-counter">0/12</span></button>
   <button id="pwa-install-btn" onclick="installPWA()" title="Installa come app (offline-ready)" style="display:none; background: linear-gradient(180deg, #166534, #052e16); color: #86efac;">⚓ Installa app</button>
 </div>
 <div id="confetti-root"></div>
+
+<div id="tour-overlay" role="dialog" aria-label="Tour guidato">
+  <div id="tour-spotlight"></div>
+  <div id="tour-popup">
+    <div class="tour-title" id="tour-title"></div>
+    <div class="tour-body" id="tour-body"></div>
+    <div class="tour-nav">
+      <div class="tour-dots" id="tour-dots"></div>
+      <div class="tour-buttons">
+        <button class="tour-btn skip" onclick="endTour()">Salta</button>
+        <button class="tour-btn" id="tour-prev" onclick="tourPrev()">← Indietro</button>
+        <button class="tour-btn primary" id="tour-next" onclick="tourNext()">Avanti →</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div class="tabs">
   <button class="tab active" data-tab="browser">🏴‍☠️ Crew Browser</button>
@@ -2261,6 +2334,8 @@ function init() {
   applySharedRoll();
   updateAchievementBadge();
   checkAchievements();
+  // First-visit onboarding (silent if already seen)
+  setTimeout(() => startTour(false), 700);
 }
 
 // ============ MODAL & TOAST ============
@@ -2281,6 +2356,145 @@ window.toast = function(msg, kind) {
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
 };
+
+// ============ ONBOARDING TOUR (Step 4) ============
+const TOUR_STEPS = [
+  {
+    target: null,
+    title: '⚓ Benvenuto a bordo, Capitano',
+    body: 'Questo è <strong>The Great Expedition Codex</strong> — il tuo compendio per il Great Ocean.<br><br>In 5 step ti mostro le tab principali. Puoi saltare in qualsiasi momento (verrà ricordato).',
+    position: 'center'
+  },
+  {
+    target: '.tabs',
+    title: '🗺️ Naviga tra le 8 tab',
+    body: 'Ogni tab è uno strumento diverso: Crew Browser per i sailor, Build Optimizer per le combo, Roll Tracker per le tue rolls, Barter Calc per le rotte, Carrack Builder per la nave end-game e Daily/Weekly per i reset.<br><br><em style="opacity:0.7;">Suggerimento: tasti <kbd>1</kbd>–<kbd>8</kbd> per cambiare tab veloce.</em>',
+    position: 'bottom'
+  },
+  {
+    target: '[data-tab="tracker"]',
+    title: '📈 Roll Tracker — il tuo IP',
+    body: 'Tieni traccia delle stat dei sailor che rolli (livelli 2–10). Min/max roll vengono evidenziati automaticamente. Salvi quanti sailor vuoi e poi puoi <strong>condividerli</strong> con la gilda via link.',
+    position: 'auto',
+    autoClickTab: 'tracker'
+  },
+  {
+    target: '[data-tab="barter"]',
+    title: '💰 Barter Calc + ROI',
+    body: 'Lista 60 item L1, calcolo Crow Coin, mastery/VP/fame e — novità — <strong>Silver/ora per rotta</strong> con tutti i tier T1–T7 incluso il post-patch 16-Apr-2026.',
+    position: 'auto',
+    autoClickTab: 'barter'
+  },
+  {
+    target: '#ach-counter-badge',
+    title: '🏆 12 Achievement da sbloccare',
+    body: 'Salva sailor, costruisci la Carrack, condividi link, esplora Crow ROI — ogni azione conta. Confetti garantiti su unlock.<br><br>Buon viaggio, Capitano! ⚓',
+    position: 'bottom'
+  }
+];
+
+let _tourStep = 0;
+let _tourActive = false;
+
+window.startTour = function(forceRestart) {
+  // First-visit auto-trigger uses localStorage flag
+  if (!forceRestart && localStorage.getItem('bdo-tour-seen')) return;
+  _tourStep = 0;
+  _tourActive = true;
+  document.getElementById('tour-overlay').classList.add('active');
+  renderTourStep();
+};
+
+window.tourNext = function() {
+  if (_tourStep >= TOUR_STEPS.length - 1) { endTour(); return; }
+  _tourStep++;
+  renderTourStep();
+};
+
+window.tourPrev = function() {
+  if (_tourStep <= 0) return;
+  _tourStep--;
+  renderTourStep();
+};
+
+window.endTour = function() {
+  _tourActive = false;
+  document.getElementById('tour-overlay').classList.remove('active');
+  localStorage.setItem('bdo-tour-seen', '1');
+};
+
+function renderTourStep() {
+  const step = TOUR_STEPS[_tourStep];
+  // Auto-switch tab if requested
+  if (step.autoClickTab) {
+    const tab = document.querySelector('[data-tab="' + step.autoClickTab + '"]');
+    if (tab) tab.click();
+  }
+  // Title + body
+  document.getElementById('tour-title').innerHTML = step.title;
+  document.getElementById('tour-body').innerHTML = step.body;
+  // Dots
+  document.getElementById('tour-dots').innerHTML = TOUR_STEPS.map((_, i) =>
+    `<div class="tour-dot ${i === _tourStep ? 'active' : ''}"></div>`
+  ).join('');
+  // Buttons
+  document.getElementById('tour-prev').style.visibility = _tourStep === 0 ? 'hidden' : 'visible';
+  document.getElementById('tour-next').textContent = _tourStep === TOUR_STEPS.length - 1 ? '⚓ Salpa!' : 'Avanti →';
+  // Position spotlight + popup
+  positionTour(step);
+}
+
+function positionTour(step) {
+  const popup = document.getElementById('tour-popup');
+  const spotlight = document.getElementById('tour-spotlight');
+  popup.classList.remove('center');
+  if (!step.target) {
+    spotlight.style.display = 'none';
+    popup.classList.add('center');
+    return;
+  }
+  const target = document.querySelector(step.target);
+  if (!target) {
+    // Fallback to center if target not found
+    spotlight.style.display = 'none';
+    popup.classList.add('center');
+    return;
+  }
+  // Scroll target into view
+  target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  setTimeout(() => {
+    const rect = target.getBoundingClientRect();
+    const pad = 8;
+    spotlight.style.display = 'block';
+    spotlight.style.top  = (rect.top - pad) + 'px';
+    spotlight.style.left = (rect.left - pad) + 'px';
+    spotlight.style.width  = (rect.width  + pad * 2) + 'px';
+    spotlight.style.height = (rect.height + pad * 2) + 'px';
+    // Popup placement: prefer below target, else above; check viewport
+    const popupH = 220, popupW = Math.min(380, window.innerWidth * 0.9);
+    let top, left;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+    if (step.position === 'bottom' || (spaceBelow >= popupH + 30) || spaceBelow > spaceAbove) {
+      top = Math.min(rect.bottom + 20, window.innerHeight - popupH - 20);
+    } else {
+      top = Math.max(20, rect.top - popupH - 20);
+    }
+    left = Math.max(12, Math.min(rect.left + rect.width / 2 - popupW / 2, window.innerWidth - popupW - 12));
+    popup.style.top = top + 'px';
+    popup.style.left = left + 'px';
+  }, 350);
+}
+
+// Close on Escape key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && _tourActive) endTour();
+});
+
+// Reposition on resize
+window.addEventListener('resize', () => {
+  if (_tourActive) positionTour(TOUR_STEPS[_tourStep]);
+});
 
 // ============ ACHIEVEMENTS SYSTEM ============
 // Localstorage-only gamification. 12 achievements. Confetti + golden toast on unlock.
