@@ -1166,11 +1166,13 @@
       </div>
       <div id="route-roi-output"></div>
       <p class="hint" style="margin-top: 10px; font-size: 0.78rem;">
-        💡 <strong>Silver values medi verificati</strong> (Davdzsi/BDFoundry, Jan 2026):
-        T1 ~600k · T2 ~1M · T3 ~1M · T4 ~2M · T5 ~5M · T5m (Margoria) ~10M.
-        <strong>T6/T7</strong>: silver value non ancora stabile post-patch 16-Apr-2026 — calcolo solo costo parley.
-        <br>⚠️ I valori reali oscillano in base agli item specifici (BDO Codex per dettaglio per-item).
-        Il calcolo Silver/Hour assume <strong>tutti i barter completati senza fail</strong> e nessun tempo di restock al wharf.
+        💡 <strong>Silver values verificati:</strong>
+        T1 ~600k · T2/T3 ~1M · T4 ~2M · T5 ~5M · T5m ~10M (Davdzsi/BDFoundry, Jan 2026) ·
+        <strong style="color: var(--green);">T6 50M · T7 100M</strong> (patch ufficiale Pearl Abyss 16-Apr-2026).
+        <br>⚠️ I valori T1-T5 sono medie (oscillano per item — vedi BDO Codex per dettaglio).
+        Il calcolo Silver/Hour assume <strong>tutti i barter completati senza fail</strong>, no tempo di restock al wharf
+        e disponibilità rotta — è un <strong>upper bound teorico</strong>.
+        T6/T7 richiedono viaggi inter-continentali (no Transport possibile, "trade goods can no longer be moved via Transport").
       </p>
     </div>
   </div>
@@ -3143,8 +3145,8 @@ const BARTER_TIER_DATA = [
   { tier: 'T4',  label: 'L4 → L5',          avgSilver: 2000000,   parleyBase: 14290, weight: 750,  note: '' },
   { tier: 'T5',  label: 'L5 → exit (Sea Coin)', avgSilver: 5000000, parleyBase: 21650, weight: 1000, note: 'Sea Coin barter (parley più alto)' },
   { tier: 'T5m', label: 'L5 Margoria',      avgSilver: 10000000,  parleyBase: 14290, weight: 1000, note: 'Solo isole Margoria — top tier T1-5' },
-  { tier: 'T6',  label: 'L6 (post-patch)',  avgSilver: null,      parleyBase: 10675, weight: 2000, note: 'Silver value WIP — patch 16-Apr-2026' },
-  { tier: 'T7',  label: 'L7 (top tier)',    avgSilver: null,      parleyBase: 10675, weight: 2000, note: 'Silver value WIP — patch 16-Apr-2026' }
+  { tier: 'T6',  label: 'L5 → L6',          avgSilver: 50000000,  parleyBase: 10675, weight: 2000, note: 'Hakoven/Arehaza/Grándiha/Starry-Midnight/Haemo/Dallae — 6 nodi' },
+  { tier: 'T7',  label: 'L6 → L7',          avgSilver: 100000000, parleyBase: 10675, weight: 2000, note: 'Olvia/Epheria-Sentry/Sausan/Sanctuary/Iliya/Lema — 6 nodi' }
 ];
 
 function toggleRouteRoi() {
@@ -3190,7 +3192,12 @@ function renderRouteRoi() {
   const sorted = [...withValue, ...noValue];
   const bestSilverHour = withValue[0]?.silverPerHour || 0;
 
-  const fmtM = (n) => n == null ? '—' : (n >= 1000000 ? (n / 1000000).toFixed(2) + 'M' : Math.round(n / 1000) + 'k');
+  const fmtM = (n) => {
+    if (n == null) return '—';
+    if (n >= 1000000000) return (n / 1000000000).toFixed(2) + 'G';
+    if (n >= 1000000) return (n / 1000000).toFixed(2) + 'M';
+    return Math.round(n / 1000) + 'k';
+  };
   const fmtSilver = (n) => n == null ? '—' : n.toLocaleString('it');
 
   out.innerHTML = `
