@@ -1140,7 +1140,41 @@
     </div>
   </div>
   <div id="mastery-info" class="feedback"></div>
-  
+
+  <div id="route-roi-card" style="margin-top: 16px; background: rgba(20,30,45,0.55); border: 1px solid rgba(212,165,72,0.35); border-radius: 8px; padding: 14px 16px;">
+    <h3 style="cursor:pointer; margin: 0 0 8px 0; user-select:none;" onclick="toggleRouteRoi()">
+      📈 Silver/Ora per Rotta
+      <small style="opacity:0.65; font-weight:normal; font-size:0.75rem;" id="route-roi-toggle-hint">(click per espandere)</small>
+    </h3>
+    <div id="route-roi-body" style="display:none;">
+      <div class="filters" style="margin-bottom: 10px;">
+        <div class="filter-group">
+          <label>Tempo per giro (min)</label>
+          <input type="number" id="route-time" value="8" min="1" max="60" step="0.5" oninput="renderRouteRoi()">
+        </div>
+        <div class="filter-group">
+          <label>Barter eseguiti per giro</label>
+          <input type="number" id="route-steps" value="6" min="1" max="20" oninput="renderRouteRoi()">
+        </div>
+        <div class="filter-group">
+          <label>Cleia (First Mate)</label>
+          <select id="route-cleia" onchange="renderRouteRoi()">
+            <option value="0">No (-0%)</option>
+            <option value="10">Sì (-10% parley)</option>
+          </select>
+        </div>
+      </div>
+      <div id="route-roi-output"></div>
+      <p class="hint" style="margin-top: 10px; font-size: 0.78rem;">
+        💡 <strong>Silver values medi verificati</strong> (Davdzsi/BDFoundry, Jan 2026):
+        T1 ~600k · T2 ~1M · T3 ~1M · T4 ~2M · T5 ~5M · T5m (Margoria) ~10M.
+        <strong>T6/T7</strong>: silver value non ancora stabile post-patch 16-Apr-2026 — calcolo solo costo parley.
+        <br>⚠️ I valori reali oscillano in base agli item specifici (BDO Codex per dettaglio per-item).
+        Il calcolo Silver/Hour assume <strong>tutti i barter completati senza fail</strong> e nessun tempo di restock al wharf.
+      </p>
+    </div>
+  </div>
+
   <h3>💎 Barter Items (Level 1 Goods)</h3>
   <div class="filters">
     <div class="filter-group" style="flex: 1; min-width: 200px;">
@@ -3094,6 +3128,112 @@ function updateMasteryInfo() {
     <strong style="color: var(--green);">Total Bonus: ${total.toFixed(2)}%</strong><br>
     Regular Barter Parley cost stimato: <strong>~${regularCost.toLocaleString('it')}</strong> |
     Sea Coin: <strong>~${seaCoinCost.toLocaleString('it')}</strong>
+  `;
+  // Riallinea anche il widget Silver/Ora per Rotta
+  if (document.getElementById('route-roi-body')?.style.display !== 'none') renderRouteRoi();
+}
+
+// ============ SILVER / HOUR PER ROTTA ============
+// Avg silver values verificati: Davdzsi (gamerofpassion.com) + BDFoundry bartering guide
+// Parley base: 14290 (trade), 21650 (sea coin), 10675 (T6/T7 standardizzato)
+const BARTER_TIER_DATA = [
+  { tier: 'T1',  label: 'L1 → L2',          avgSilver: 600000,    parleyBase: 14290, weight: 200,  note: '200k–1M item-dependent' },
+  { tier: 'T2',  label: 'L2 → L3',          avgSilver: 1000000,   parleyBase: 14290, weight: 400,  note: 'Post-patch: 800→400 LT' },
+  { tier: 'T3',  label: 'L3 → L4',          avgSilver: 1000000,   parleyBase: 14290, weight: 500,  note: 'Stesso silver di T2, più peso' },
+  { tier: 'T4',  label: 'L4 → L5',          avgSilver: 2000000,   parleyBase: 14290, weight: 750,  note: '' },
+  { tier: 'T5',  label: 'L5 → exit (Sea Coin)', avgSilver: 5000000, parleyBase: 21650, weight: 1000, note: 'Sea Coin barter (parley più alto)' },
+  { tier: 'T5m', label: 'L5 Margoria',      avgSilver: 10000000,  parleyBase: 14290, weight: 1000, note: 'Solo isole Margoria — top tier T1-5' },
+  { tier: 'T6',  label: 'L6 (post-patch)',  avgSilver: null,      parleyBase: 10675, weight: 2000, note: 'Silver value WIP — patch 16-Apr-2026' },
+  { tier: 'T7',  label: 'L7 (top tier)',    avgSilver: null,      parleyBase: 10675, weight: 2000, note: 'Silver value WIP — patch 16-Apr-2026' }
+];
+
+function toggleRouteRoi() {
+  const body = document.getElementById('route-roi-body');
+  const hint = document.getElementById('route-roi-toggle-hint');
+  if (!body) return;
+  if (body.style.display === 'none') {
+    body.style.display = 'block';
+    if (hint) hint.textContent = '(click per chiudere)';
+    renderRouteRoi();
+  } else {
+    body.style.display = 'none';
+    if (hint) hint.textContent = '(click per espandere)';
+  }
+}
+
+function renderRouteRoi() {
+  const out = document.getElementById('route-roi-output');
+  if (!out) return;
+  const masteryEl = document.getElementById('barter-mastery');
+  const vpEl = document.getElementById('barter-vp');
+  const fameEl = document.getElementById('barter-fame');
+  const cleiaEl = document.getElementById('route-cleia');
+  const reduction = (parseFloat(masteryEl?.value) || 0)
+                  + (parseFloat(vpEl?.value) || 0)
+                  + (parseFloat(fameEl?.value) || 0)
+                  + (parseFloat(cleiaEl?.value) || 0);
+  const timeMin = Math.max(0.5, parseFloat(document.getElementById('route-time')?.value) || 8);
+  const steps = Math.max(1, parseInt(document.getElementById('route-steps')?.value) || 6);
+  const reductionFactor = Math.max(0, 1 - reduction / 100);
+  const bartersPerHour = (60 / timeMin) * steps;
+
+  const rows = BARTER_TIER_DATA.map(t => {
+    const parleyCost = Math.max(1, Math.round(t.parleyBase * reductionFactor));
+    const silverPerParley = t.avgSilver ? Math.round(t.avgSilver / parleyCost) : null;
+    const silverPerHour = t.avgSilver ? Math.round(t.avgSilver * bartersPerHour) : null;
+    return { ...t, parleyCost, silverPerParley, silverPerHour };
+  });
+
+  // Sort: tiers with silverPerHour first, sorted desc; T6/T7 (null) at bottom in original order
+  const withValue = rows.filter(r => r.silverPerHour != null).sort((a, b) => b.silverPerHour - a.silverPerHour);
+  const noValue = rows.filter(r => r.silverPerHour == null);
+  const sorted = [...withValue, ...noValue];
+  const bestSilverHour = withValue[0]?.silverPerHour || 0;
+
+  const fmtM = (n) => n == null ? '—' : (n >= 1000000 ? (n / 1000000).toFixed(2) + 'M' : Math.round(n / 1000) + 'k');
+  const fmtSilver = (n) => n == null ? '—' : n.toLocaleString('it');
+
+  out.innerHTML = `
+    <div style="overflow-x:auto;">
+    <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
+      <thead>
+        <tr style="border-bottom: 1px solid rgba(212,165,72,0.4); text-align:left;">
+          <th style="padding: 6px 8px;">Tier</th>
+          <th style="padding: 6px 8px;">Avg Silver / barter</th>
+          <th style="padding: 6px 8px;">Parley / barter</th>
+          <th style="padding: 6px 8px;">Silver / Parley</th>
+          <th style="padding: 6px 8px;">Silver / Ora</th>
+          <th style="padding: 6px 8px;">Weight (LT)</th>
+          <th style="padding: 6px 8px;">Note</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${sorted.map(r => {
+          const isBest = r.silverPerHour === bestSilverHour && bestSilverHour > 0;
+          const rowBg = isBest ? 'background: rgba(74,222,128,0.10);' : '';
+          const badge = isBest ? ' <span style="background:var(--green);color:#0a1929;padding:1px 6px;border-radius:3px;font-size:0.7rem;font-weight:bold;">BEST</span>' : '';
+          return `
+            <tr style="${rowBg} border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <td style="padding: 6px 8px;"><strong>${r.tier}</strong>${badge}<br><small style="opacity:0.6;">${r.label}</small></td>
+              <td style="padding: 6px 8px;">${fmtSilver(r.avgSilver)}</td>
+              <td style="padding: 6px 8px; color: var(--brass-bright);">${fmtSilver(r.parleyCost)}</td>
+              <td style="padding: 6px 8px;">${fmtSilver(r.silverPerParley)}</td>
+              <td style="padding: 6px 8px; color: ${r.silverPerHour ? 'var(--green)' : 'var(--parchment)'}; font-weight: bold;">${fmtM(r.silverPerHour)}/h</td>
+              <td style="padding: 6px 8px; opacity: 0.7;">${r.weight}</td>
+              <td style="padding: 6px 8px; opacity: 0.65; font-size: 0.78rem;">${r.note || ''}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+    <div style="margin-top: 10px; padding: 8px 10px; background: rgba(74,222,128,0.08); border-left: 3px solid var(--green); border-radius: 4px; font-size: 0.82rem;">
+      <strong>📊 Setup attuale:</strong>
+      Reduction totale <strong style="color:var(--brass-bright);">${reduction.toFixed(2)}%</strong>
+      (Mastery + VP + Fame + Cleia) ·
+      <strong>${bartersPerHour.toFixed(1)} barter/ora</strong>
+      (${steps} per giro × ${(60 / timeMin).toFixed(2)} giri/ora)
+    </div>
   `;
 }
 
