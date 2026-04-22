@@ -3273,6 +3273,46 @@ function renderRouteRoi() {
   `;
 }
 
+// ============ EMPTY STATE HELPER (UI/UX Pro Max Phase 3) ============
+// Empty state ricco con filtri attivi + bottone reset (UX best practice:
+// evita dead-ends, mostra cosa non matcha e come tornare ai risultati)
+function emptyStateHTML({ icon = '🔍', title, hints = [], resetFn, resetLabel = 'Pulisci filtri' }) {
+  const hintsHtml = hints.length
+    ? `<div style="margin-top: 10px; font-size: 0.85rem; opacity: 0.78; line-height: 1.55;">${hints.map(h => '• ' + h).join('<br>')}</div>`
+    : '';
+  const btnHtml = resetFn
+    ? `<button onclick="${resetFn}()" style="margin-top: 14px; padding: 7px 16px; background: rgba(212,165,72,0.18); color: var(--brass-bright); border: 1px solid var(--brass); border-radius: 4px; cursor: pointer; font-size: 0.85rem; font-family: inherit;">↺ ${resetLabel}</button>`
+    : '';
+  return `
+    <div style="padding: 32px 20px; text-align: center;">
+      <div style="font-size: 2rem; margin-bottom: 10px;">${icon}</div>
+      <div style="font-weight: bold; color: var(--parchment); font-size: 1rem;">${title}</div>
+      ${hintsHtml}
+      ${btnHtml}
+    </div>
+  `;
+}
+
+function resetBarterFilters() {
+  document.getElementById('barter-search').value = '';
+  document.getElementById('barter-filter').value = 'all';
+  renderBarterTable();
+}
+
+function resetSailorFilters() {
+  const ids = ['filter-race', 'filter-location', 'filter-tag', 'filter-search'];
+  ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+  renderSailors();
+}
+
+function resetCrowFilters() {
+  const hideShipEl = document.getElementById('crow-roi-hide-ship');
+  const onlyPosEl = document.getElementById('crow-roi-only-positive');
+  if (hideShipEl) hideShipEl.checked = false;
+  if (onlyPosEl) onlyPosEl.checked = false;
+  renderCrowRoi();
+}
+
 function renderBarterTable() {
   const search = document.getElementById('barter-search').value.toLowerCase();
   const filter = document.getElementById('barter-filter').value;
@@ -3288,10 +3328,15 @@ function renderBarterTable() {
   list.sort((a, b) => b.mp - a.mp);
   
   if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; opacity:0.6; padding: 20px;">Nessun item trovato</td></tr>';
+    const hints = [];
+    if (search) hints.push(`Ricerca attiva: "<strong>${search}</strong>"`);
+    if (filter === 'buy') hints.push('Filtro: <strong>solo "Buy"</strong>');
+    if (filter === 'high') hints.push('Filtro: <strong>Market &gt; 10.000</strong>');
+    if (!hints.length) hints.push('Prova a cambiare ricerca o filtri');
+    tbody.innerHTML = `<tr><td colspan="6">${emptyStateHTML({ icon: '🏴', title: 'Nessun barter item match', hints, resetFn: 'resetBarterFilters' })}</td></tr>`;
     return;
   }
-  
+
   tbody.innerHTML = list.map(it => {
     const valueX6 = it.mp * it.amt6;
     const stockColor = it.stock > 50000 ? 'var(--green)' : it.stock > 10000 ? 'var(--brass-bright)' : it.stock > 0 ? 'var(--parchment)' : 'var(--red)';
@@ -3472,7 +3517,13 @@ function renderCrowRoi() {
             </tr>
           `;
         }).join('')}
-        ${filtered.length === 0 ? '<tr><td colspan="5" style="padding: 16px; text-align: center; opacity: 0.7;">Nessun item corrisponde ai filtri.</td></tr>' : ''}
+        ${filtered.length === 0 ? (() => {
+          const hints = [];
+          if (hideShip) hints.push('Filtro: <strong>nascondi Ship Gate</strong>');
+          if (onlyPos) hints.push('Filtro: <strong>solo ROI &ge; baseline (100k/CC)</strong>');
+          if (!hints.length) hints.push('Inserisci market price per gli item Resell');
+          return `<tr><td colspan="5">${emptyStateHTML({ icon: '🪙', title: 'Nessun item corrisponde ai filtri', hints, resetFn: 'resetCrowFilters' })}</td></tr>`;
+        })() : ''}
       </tbody>
     </table>`;
 
@@ -3587,7 +3638,13 @@ function renderSailors() {
   
   const grid = document.getElementById('sailor-grid');
   if (list.length === 0) {
-    grid.innerHTML = '<div class="empty-state">🏝️ Nessun sailor trovato con questi filtri...</div>';
+    const hints = [];
+    if (race) hints.push(`Razza: <strong>${race}</strong>`);
+    if (loc) hints.push(`Location: <strong>${loc}</strong>`);
+    if (tag) hints.push(`Tipo: <strong>${tag}</strong>`);
+    if (search) hints.push(`Ricerca: "<strong>${search}</strong>"`);
+    if (!hints.length) hints.push('Prova a rilassare uno dei filtri');
+    grid.innerHTML = emptyStateHTML({ icon: '🏝️', title: 'Nessun sailor match', hints, resetFn: 'resetSailorFilters' });
     return;
   }
   grid.innerHTML = list.map(s => {
