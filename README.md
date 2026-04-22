@@ -2,9 +2,7 @@
 
 BDO Sailing & Barter Companion — single-page app per capitani del Great Ocean.
 
-**Live:**
-- https://sailor.info-pixservice.workers.dev/ (Cloudflare Pages — primary)
-- https://bdo-expedition-codex.netlify.app/ (Netlify — mirror)
+**Live:** https://sailor.info-pixservice.workers.dev/ (Cloudflare Pages)
 
 **Forged by Greamory · Gilda Lithium**
 
@@ -36,7 +34,7 @@ BDO Sailing & Barter Companion — single-page app per capitani del Great Ocean.
 
 HTML + CSS + vanilla JS — zero dipendenze, zero build step. Un singolo file `index.html`.
 
-Hosting: **Cloudflare Pages** (primary, deploy automatico da `main`) + **Netlify** (mirror).
+Hosting: **Cloudflare Pages** — deploy automatico da `main`.
 
 ## Fonti dati
 
