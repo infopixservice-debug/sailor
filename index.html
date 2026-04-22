@@ -843,6 +843,72 @@
   .toast.show { transform: translateX(-50%) translateY(0); }
   .toast.good { border-color: var(--green); color: var(--green); }
   .toast.bad { border-color: var(--red); color: var(--red); }
+  /* Achievement unlock toast — special golden style */
+  .toast.achievement {
+    border: 2px solid var(--brass-bright);
+    background: linear-gradient(135deg, rgba(244,201,107,0.18), rgba(212,165,72,0.12), rgba(15,41,66,0.95));
+    color: var(--brass-bright);
+    box-shadow: 0 8px 24px rgba(244,201,107,0.45), 0 0 40px rgba(244,201,107,0.25);
+    font-family: 'Cinzel', serif;
+    letter-spacing: 0.5px;
+  }
+  /* Confetti container */
+  #confetti-root {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none;
+    z-index: 99998;
+    overflow: hidden;
+  }
+  .confetti-piece {
+    position: absolute;
+    width: 10px; height: 14px;
+    top: -20px;
+    will-change: transform, opacity;
+    animation: confetti-fall var(--dur, 1.6s) cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translate3d(0, 0, 0) rotate(0deg); opacity: 1; }
+    100% { transform: translate3d(var(--dx, 0px), 90vh, 0) rotate(var(--rot, 540deg)); opacity: 0; }
+  }
+  /* Achievement grid in modal */
+  .ach-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .ach-card {
+    background: linear-gradient(180deg, rgba(15,41,66,0.6), rgba(10,25,41,0.7));
+    border: 1px solid rgba(212,165,72,0.25);
+    border-radius: 6px;
+    padding: 14px 12px;
+    text-align: center;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+    position: relative;
+  }
+  .ach-card.unlocked {
+    border-color: var(--brass-bright);
+    background: linear-gradient(180deg, rgba(244,201,107,0.12), rgba(15,41,66,0.7));
+    box-shadow: 0 0 16px rgba(244,201,107,0.18);
+  }
+  .ach-card.unlocked:hover { transform: translateY(-2px); box-shadow: 0 4px 18px rgba(244,201,107,0.32); }
+  .ach-card.locked { opacity: 0.55; filter: grayscale(0.6); }
+  .ach-icon { font-size: 2.2rem; margin-bottom: 6px; line-height: 1; }
+  .ach-name { font-family: 'Cinzel', serif; font-weight: 600; color: var(--brass-bright); font-size: 0.92rem; margin-bottom: 4px; }
+  .ach-desc { font-size: 0.78rem; opacity: 0.78; line-height: 1.4; }
+  .ach-date { font-size: 0.7rem; color: var(--green); margin-top: 6px; opacity: 0.85; }
+  .ach-counter {
+    display: inline-block;
+    background: rgba(244,201,107,0.18);
+    color: var(--brass-bright);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin-left: 6px;
+  }
   /* Toolbar */
   .toolbar {
     display: flex;
@@ -1001,8 +1067,10 @@
   <button onclick="document.getElementById('import-file').click()" title="Importa un backup JSON">📤 Importa backup</button>
   <input type="file" id="import-file" accept="application/json" style="display:none" onchange="importData(event)">
   <button onclick="openShortcutsModal()" title="Scorciatoie tastiera">⌨️ Scorciatoie</button>
+  <button onclick="openAchievementsModal()" title="Achievement della tua spedizione" style="background: linear-gradient(180deg, #4a3818, #1a1408); color: var(--brass-bright);">🏆 Achievements <span id="ach-counter-badge" class="ach-counter">0/12</span></button>
   <button id="pwa-install-btn" onclick="installPWA()" title="Installa come app (offline-ready)" style="display:none; background: linear-gradient(180deg, #166534, #052e16); color: #86efac;">⚓ Installa app</button>
 </div>
+<div id="confetti-root"></div>
 
 <div class="tabs">
   <button class="tab active" data-tab="browser">🏴‍☠️ Crew Browser</button>
@@ -2128,6 +2196,8 @@ function init() {
   initKeyboard();
   applySharedCompare();
   applySharedRoll();
+  updateAchievementBadge();
+  checkAchievements();
 }
 
 // ============ MODAL & TOAST ============
@@ -2147,6 +2217,169 @@ window.toast = function(msg, kind) {
   t.textContent = msg;
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => t.classList.remove('show'), 2600);
+};
+
+// ============ ACHIEVEMENTS SYSTEM ============
+// Localstorage-only gamification. 12 achievements. Confetti + golden toast on unlock.
+const ACHIEVEMENTS = [
+  { id: 'first-sailor',    icon: '🏴', name: 'Imbarco',           desc: 'Salva il tuo primo sailor nel Roll Tracker' },
+  { id: 'crew-of-five',    icon: '⚓', name: 'Crew di 5',          desc: 'Mantieni 5 sailor salvati contemporaneamente' },
+  { id: 'full-roster',     icon: '👑', name: 'Roster Completo',    desc: 'Salva tutti e 20 i tipi di sailor' },
+  { id: 'min-or-max',      icon: '🎯', name: 'Tiro Perfetto',      desc: 'Ottieni un min o max roll su una stat' },
+  { id: 'comparator-user', icon: '⚔️', name: 'Stratega',           desc: 'Confronta 4 sailor nel Comparator' },
+  { id: 'crow-explorer',   icon: '🪙', name: 'Curioso del Corvo',  desc: 'Apri il Crow Coin ROI tab' },
+  { id: 'barter-million',  icon: '💰', name: 'Primo Milione',      desc: 'Barter calc mostra value totale ≥ 1M silver' },
+  { id: 't7-pioneer',      icon: '🏆', name: 'T7 Pioneer',         desc: 'Visualizza la tabella T7 (post-patch 16-Apr-2026)' },
+  { id: 'carrack-started', icon: '🚢', name: 'Carrack Avviata',    desc: 'Logga il primo materiale Carrack' },
+  { id: 'carrack-half',    icon: '🛠️', name: 'A metà strada',      desc: 'Raggiungi 50% di progresso Carrack' },
+  { id: 'carrack-done',    icon: '⚔️', name: 'Carrack Forgiata',   desc: '100% Carrack completata' },
+  { id: 'sharer',          icon: '🔗', name: 'Capitano Generoso',  desc: 'Condividi un link (compare o tracker)' },
+];
+
+function loadAchievements() {
+  try { return JSON.parse(localStorage.getItem('bdo-achievements') || '{}'); } catch { return {}; }
+}
+function saveAchievements(s) { localStorage.setItem('bdo-achievements', JSON.stringify(s)); }
+
+window.unlockAchievement = function(id) {
+  const ach = ACHIEVEMENTS.find(a => a.id === id);
+  if (!ach) return;
+  const state = loadAchievements();
+  if (state[id]) return; // already unlocked
+  state[id] = new Date().toISOString();
+  saveAchievements(state);
+  // Golden toast (override default)
+  const t = document.getElementById('toast');
+  if (t) {
+    t.className = 'toast show achievement';
+    t.innerHTML = `<div style="font-size:1.4rem;">${ach.icon}</div><div><div style="font-size:0.78rem; opacity:0.75; text-transform:uppercase; letter-spacing:1.2px;">Achievement Sbloccato</div><div style="font-size:1.05rem; font-weight:700;">${ach.name}</div></div>`;
+    t.style.display = 'flex';
+    t.style.alignItems = 'center';
+    t.style.gap = '12px';
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      t.classList.remove('show');
+      t.style.display = '';
+    }, 3800);
+  }
+  // Confetti burst
+  spawnConfetti(ach.icon === '🏆' || ach.icon === '👑' ? 50 : 30);
+  // Update counter badge
+  updateAchievementBadge();
+};
+
+function updateAchievementBadge() {
+  const badge = document.getElementById('ach-counter-badge');
+  if (!badge) return;
+  const state = loadAchievements();
+  const count = Object.keys(state).length;
+  badge.textContent = `${count}/${ACHIEVEMENTS.length}`;
+  if (count === ACHIEVEMENTS.length) badge.style.background = 'rgba(74,222,128,0.25)', badge.style.color = 'var(--green)';
+}
+
+function spawnConfetti(count = 30) {
+  const root = document.getElementById('confetti-root');
+  if (!root) return;
+  // Respect reduced-motion
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const colors = ['#f4c96b', '#d4a548', '#4ade80', '#60a5fa', '#fbbf24', '#fca5a5', '#c084fc'];
+  const W = window.innerWidth;
+  const frag = document.createDocumentFragment();
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.className = 'confetti-piece';
+    const startX = Math.random() * W;
+    const dx = (Math.random() - 0.5) * 400;
+    const rot = (Math.random() * 720 + 180) * (Math.random() < 0.5 ? -1 : 1);
+    const dur = 1.2 + Math.random() * 1.2;
+    const size = 6 + Math.random() * 8;
+    el.style.left = startX + 'px';
+    el.style.background = colors[i % colors.length];
+    el.style.width = size + 'px';
+    el.style.height = (size * 1.4) + 'px';
+    el.style.borderRadius = Math.random() < 0.3 ? '50%' : '2px';
+    el.style.setProperty('--dx', dx + 'px');
+    el.style.setProperty('--rot', rot + 'deg');
+    el.style.setProperty('--dur', dur + 's');
+    setTimeout(() => el.remove(), (dur + 0.1) * 1000);
+    frag.appendChild(el);
+  }
+  root.appendChild(frag);
+}
+
+window.openAchievementsModal = function() {
+  const state = loadAchievements();
+  const unlockedCount = Object.keys(state).length;
+  const fmt = (iso) => {
+    try { const d = new Date(iso); return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'short', year: 'numeric' }); } catch { return ''; }
+  };
+  const cardsHtml = ACHIEVEMENTS.map(a => {
+    const unlocked = !!state[a.id];
+    return `
+      <div class="ach-card ${unlocked ? 'unlocked' : 'locked'}">
+        <div class="ach-icon">${unlocked ? a.icon : '🔒'}</div>
+        <div class="ach-name">${a.name}</div>
+        <div class="ach-desc">${a.desc}</div>
+        ${unlocked ? `<div class="ach-date">✓ ${fmt(state[a.id])}</div>` : ''}
+      </div>`;
+  }).join('');
+  const pct = Math.round((unlockedCount / ACHIEVEMENTS.length) * 100);
+  openModal(`
+    <h2 style="color: var(--brass-bright); margin-top: 0; font-family: 'Cinzel', serif;">🏆 Achievements della Spedizione</h2>
+    <div style="background: rgba(15,41,66,0.5); border: 1px solid rgba(212,165,72,0.25); border-radius: 6px; padding: 12px 14px; margin-bottom: 4px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <strong>Progresso</strong>
+        <span style="color: var(--brass-bright); font-weight: 700;">${unlockedCount}/${ACHIEVEMENTS.length} (${pct}%)</span>
+      </div>
+      <div style="height: 8px; background: rgba(0,0,0,0.4); border-radius: 4px; overflow: hidden;">
+        <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, var(--brass), var(--brass-bright)); transition: width 0.4s ease;"></div>
+      </div>
+    </div>
+    <div class="ach-grid">${cardsHtml}</div>
+    ${unlockedCount === ACHIEVEMENTS.length ? '<p style="text-align:center; margin-top: 16px; color: var(--green); font-family: Cinzel, serif; font-size: 1.1rem;">⚓ Hai conquistato il Great Ocean! ⚓</p>' : ''}
+  `);
+};
+
+// Trigger checks based on app state — called after relevant actions
+window.checkAchievements = async function() {
+  const state = loadAchievements();
+  // 1. crew-of-five & full-roster — count saved sailors
+  try {
+    const res = await storage.list('sailor:');
+    const count = res?.keys?.length || 0;
+    if (count >= 5 && !state['crew-of-five']) unlockAchievement('crew-of-five');
+    // full-roster: 20 distinct types
+    if (count >= 20) {
+      const types = new Set();
+      for (const k of res.keys) {
+        const r = await storage.get(k);
+        if (r) try { types.add(JSON.parse(r.value).type); } catch {}
+      }
+      if (types.size >= 20 && !state['full-roster']) unlockAchievement('full-roster');
+    }
+  } catch {}
+  // 2. carrack progress — check current variant against CARRACK_VARIANTS
+  try {
+    const variantSel = document.getElementById('carrack-variant');
+    const variant = variantSel?.value;
+    if (variant && CARRACK_VARIANTS[variant] && carrackStock[variant]) {
+      const v = CARRACK_VARIANTS[variant];
+      let totalReq = 0, totalHave = 0;
+      v.materials.forEach(m => {
+        const key = getMatKey(m);
+        const stock = carrackStock[variant][key] || [0, 0, 0];
+        const have = Math.min(stock[0] + stock[1] + stock[2], m.qty);
+        totalReq += m.qty;
+        totalHave += have;
+      });
+      if (totalReq > 0) {
+        const pct = totalHave / totalReq;
+        if (totalHave > 0 && !state['carrack-started']) unlockAchievement('carrack-started');
+        if (pct >= 0.5 && !state['carrack-half']) unlockAchievement('carrack-half');
+        if (pct >= 1.0 && !state['carrack-done']) unlockAchievement('carrack-done');
+      }
+    }
+  } catch {}
 };
 
 // ============ EXPORT / IMPORT ============
@@ -2895,6 +3128,7 @@ window.updateCarrackStock = async function(variant, matKey, storageIdx, value) {
     await storage.set('carrack-stock', JSON.stringify(carrackStock));
   } catch(e) {}
   renderCarrack();
+  checkAchievements();
 };
 
 window.resetCarrack = async function() {
@@ -3197,6 +3431,8 @@ function toggleRouteRoi() {
 function renderRouteRoi() {
   const out = document.getElementById('route-roi-output');
   if (!out) return;
+  // Achievement: T7 pioneer (rendering this table means user is exploring T6/T7 economy)
+  if (!loadAchievements()['t7-pioneer']) unlockAchievement('t7-pioneer');
   const masteryEl = document.getElementById('barter-mastery');
   const vpEl = document.getElementById('barter-vp');
   const fameEl = document.getElementById('barter-fame');
@@ -3339,8 +3575,10 @@ function renderBarterTable() {
     return;
   }
 
+  let totalValue = 0;
   tbody.innerHTML = list.map(it => {
     const valueX6 = it.mp * it.amt6;
+    totalValue += valueX6;
     const stockColor = it.stock > 50000 ? 'var(--green)' : it.stock > 10000 ? 'var(--brass-bright)' : it.stock > 0 ? 'var(--parchment)' : 'var(--red)';
     return `
       <tr>
@@ -3353,6 +3591,10 @@ function renderBarterTable() {
       </tr>
     `;
   }).join('');
+  // Achievement: barter-million
+  if (totalValue >= 1000000 && !loadAchievements()['barter-million']) {
+    unlockAchievement('barter-million');
+  }
 }
 
 window.calcCrow = function() {
@@ -3440,6 +3682,8 @@ window.resetCrowPrices = function() {
 function renderCrowRoi() {
   const el = document.getElementById('crow-roi-table');
   if (!el) return;
+  // Achievement: crow-explorer (first time this renders into the DOM)
+  if (!loadAchievements()['crow-explorer']) unlockAchievement('crow-explorer');
   const prices = crowPrices();
   const hideShip = document.getElementById('crow-roi-hide-ship')?.checked;
   const onlyPos = document.getElementById('crow-roi-only-positive')?.checked;
@@ -3958,6 +4202,10 @@ function updateTrackerHighlights() {
   } else if (maxRolls > 0 || minRolls > 0) {
     msg = `<div class="feedback warn">📊 ${maxRolls} max roll, ${minRolls} min roll. Un equipaggio normale in viaggio.</div>`;
   }
+  // Achievement: min-or-max
+  if ((maxRolls > 0 || minRolls > 0) && !loadAchievements()['min-or-max']) {
+    unlockAchievement('min-or-max');
+  }
   fb.innerHTML = msg;
 }
 
@@ -3984,6 +4232,9 @@ async function saveTracker(silent) {
     setTimeout(() => ind.classList.remove('show'), 2000);
     if (!silent) toast('Sailor salvato ⚓', 'good');
     loadSavedSailors();
+    // Achievement: first-sailor + bulk re-check
+    if (!loadAchievements()['first-sailor']) unlockAchievement('first-sailor');
+    setTimeout(() => checkAchievements(), 200);
   } catch (e) {
     if (!silent) toast('Errore salvataggio: ' + e.message, 'bad');
   }
@@ -4175,6 +4426,7 @@ window.shareCompare = async function() {
   } catch {
     prompt('Copia questo link:', url);
   }
+  if (!loadAchievements()['sharer']) unlockAchievement('sharer');
 };
 
 function applySharedCompare() {
@@ -4227,6 +4479,7 @@ window.shareSavedSailor = async function(key) {
     } catch {
       prompt('Copia questo link:', url);
     }
+    if (!loadAchievements()['sharer']) unlockAchievement('sharer');
   } catch (e) {
     toast('Errore share: ' + e.message, 'bad');
   }
@@ -4315,6 +4568,10 @@ window.renderCompare = function() {
   if (selected.length < 2) {
     wrap.innerHTML = '<div class="empty-state">⚔️ Seleziona almeno 2 sailor per confrontarli...</div>';
     return;
+  }
+  // Achievement: comparator-user (4 sailor selezionati)
+  if (selected.length === 4 && !loadAchievements()['comparator-user']) {
+    unlockAchievement('comparator-user');
   }
   // Compute best value per stat
   const best = {};
