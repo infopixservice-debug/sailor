@@ -535,6 +535,11 @@
     top: 0;
   }
   tr:hover { background: rgba(212,165,72,0.08); }
+  /* Tabular numerics — numeri allineati per cifra (UI/UX Pro Max recommendation) */
+  td, th, .stat-val, input[type="number"], .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
   .score-bar {
     display: inline-block;
     width: 60px;
