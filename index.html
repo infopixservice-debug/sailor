@@ -2755,12 +2755,12 @@ const MAP_NODES = [
   { id: 'iliya-coast', type: 't3-t4', name: 'Iliya Coast',      x: 825, y: 380, tier: 'T4', info: 'L4 → L5. ~2M silver, 750 LT. Costa Mediah orientale.' },
 
   // ===== T5 (Sea Coin) =====
-  { id: 'cron-castle', type: 't5',    name: 'Cron Castle',      x: 320, y: 615, tier: 'T5', info: 'L5 → Sea Coin barter. 5M silver, 1000 LT, parley 21.650. Sud Calpheonia.' },
+  { id: 'cron-castle', type: 't5',    name: 'Cron Castle',      x: 320, y: 615, tier: 'T5', info: 'L5 → Sea Coin barter. 10M silver (post-Apr-16-2026), 1000 LT, parley 21.650. Sud Calpheonia.' },
 
   // ===== T5m (Margoria, isole centrali) =====
-  { id: 'margoria-w',  type: 't5m',   name: 'Margoria West',    x: 350, y: 270, tier: 'T5m', info: 'Margoria L5 ovest. ~10M silver, 1000 LT, parley 14.290.' },
-  { id: 'margoria-c',  type: 't5m',   name: 'Margoria Center',  x: 490, y: 250, tier: 'T5m', info: 'Margoria L5 centro. ~10M silver. Solo isole Margoria.' },
-  { id: 'margoria-e',  type: 't5m',   name: 'Margoria East',    x: 635, y: 280, tier: 'T5m', info: 'Margoria L5 est. ~10M silver. Vicino correnti.' },
+  { id: 'margoria-w',  type: 't5m',   name: 'Margoria West',    x: 350, y: 270, tier: 'T5m', info: 'Margoria L5 Great Ocean ovest. 25M silver (post-Apr-16-2026), 1000 LT, parley 14.286.' },
+  { id: 'margoria-c',  type: 't5m',   name: 'Margoria Center',  x: 490, y: 250, tier: 'T5m', info: 'Margoria L5 Great Ocean centro. 25M silver (rare tier). Solo isole Margoria.' },
+  { id: 'margoria-e',  type: 't5m',   name: 'Margoria East',    x: 635, y: 280, tier: 'T5m', info: 'Margoria L5 Great Ocean est. 25M silver. Vicino correnti.' },
 
   // ===== T6 (L5 → L6, 50M silver, parley 10.675) =====
   // NW Margoria cluster (vicino Old Moon Guild Carrack, Port Ratt area)
@@ -4570,7 +4570,7 @@ function updateMasteryInfo() {
   const vp = parseFloat(document.getElementById('barter-vp').value);
   const fame = parseFloat(document.getElementById('barter-fame').value) || 0;
   const total = mastery + vp;
-  const regularBase = 14290; // approx base parley cost
+  const regularBase = 14286; // base parley cost (standardizzato Apr-16-2026)
   const regularCost = Math.round(regularBase * (1 - total / 100));
   const seaCoinBase = 21650;
   const seaCoinCost = Math.round(seaCoinBase * (1 - total / 100));
@@ -4589,15 +4589,15 @@ function updateMasteryInfo() {
 }
 
 // ============ SILVER / HOUR PER ROTTA ============
-// Avg silver values verificati: Davdzsi (gamerofpassion.com) + BDFoundry bartering guide
-// Parley base: 14290 (trade), 21650 (sea coin), 10675 (T6/T7 standardizzato)
+// Avg silver values verificati post Apr-16-2026 patch (NA/EU): T5=10M, T5m=25M
+// Parley base: 14286 (trade standardizzato), 21650 (sea coin), 10675 (T6/T7)
 const BARTER_TIER_DATA = [
-  { tier: 'T1',  label: 'L1 → L2',          avgSilver: 600000,    parleyBase: 14290, weight: 200,  note: '200k–1M item-dependent' },
-  { tier: 'T2',  label: 'L2 → L3',          avgSilver: 1000000,   parleyBase: 14290, weight: 400,  note: 'Post-patch: 800→400 LT' },
-  { tier: 'T3',  label: 'L3 → L4',          avgSilver: 1000000,   parleyBase: 14290, weight: 500,  note: 'Stesso silver di T2, più peso' },
-  { tier: 'T4',  label: 'L4 → L5',          avgSilver: 2000000,   parleyBase: 14290, weight: 750,  note: '' },
-  { tier: 'T5',  label: 'L5 → exit (Sea Coin)', avgSilver: 5000000, parleyBase: 21650, weight: 1000, note: 'Sea Coin barter (parley più alto)' },
-  { tier: 'T5m', label: 'L5 Margoria',      avgSilver: 10000000,  parleyBase: 14290, weight: 1000, note: 'Solo isole Margoria — top tier T1-5' },
+  { tier: 'T1',  label: 'L1 → L2',          avgSilver: 600000,    parleyBase: 14286, weight: 200,  note: '200k–1M item-dependent' },
+  { tier: 'T2',  label: 'L2 → L3',          avgSilver: 1000000,   parleyBase: 14286, weight: 400,  note: 'Post-patch: 800→400 LT' },
+  { tier: 'T3',  label: 'L3 → L4',          avgSilver: 1000000,   parleyBase: 14286, weight: 500,  note: 'Stesso silver di T2, più peso' },
+  { tier: 'T4',  label: 'L4 → L5',          avgSilver: 2000000,   parleyBase: 14286, weight: 750,  note: '' },
+  { tier: 'T5',  label: 'L5 → exit (Sea Coin)', avgSilver: 10000000, parleyBase: 21650, weight: 1000, note: 'Sea Coin barter — silver standardizzato 10M (Apr-16-2026)' },
+  { tier: 'T5m', label: 'L5 Margoria',      avgSilver: 25000000,  parleyBase: 14286, weight: 1000, note: 'Great Ocean rare tier — 25M (Apr-16-2026)' },
   { tier: 'T6',  label: 'L5 → L6',          avgSilver: 50000000,  parleyBase: 10675, weight: 2000, note: 'Hakoven/Arehaza/Grándiha/Starry-Midnight/Haemo/Dallae — 6 nodi' },
   { tier: 'T7',  label: 'L6 → L7',          avgSilver: 100000000, parleyBase: 10675, weight: 2000, note: 'Olvia/Epheria-Sentry/Sausan/Sanctuary/Iliya/Lema — 6 nodi' }
 ];
