@@ -992,6 +992,15 @@
   .map-node.dimmed:hover { transform: scale(1); }
   .map-route-line { transition: opacity 0.3s; }
   .map-route-line.dimmed { opacity: 0.15; }
+  /* Currents & monster zones layer toggle */
+  #map-currents-layer, #map-zones-layer { transition: opacity 0.4s ease; }
+  #map-currents-layer.dimmed, #map-zones-layer.dimmed { opacity: 0; pointer-events: none; }
+  .map-current { cursor: help; }
+  .map-current:hover path { stroke-width: 4; }
+  /* Reduced motion: stop the marching dashes */
+  @media (prefers-reduced-motion: reduce) {
+    .map-current animate, .map-zone animate { animation: none; }
+  }
   /* ============ ONBOARDING TOUR (Step 4) ============ */
   #tour-overlay {
     position: fixed; inset: 0;
@@ -1693,7 +1702,7 @@
 <!-- ============ SAILING MAP ============ -->
 <div class="panel" id="panel-map">
   <h2>🗺️ Sailing Map — Great Ocean</h2>
-  <p class="hint">Mappa schematica (non geografica) dei nodi barter T1–T7, hub e fast currents post-patch 16-Apr-2026. Click su un nodo per dettagli.</p>
+  <p class="hint">Carta del Great Ocean post-patch 16-Apr-2026: hub, nodi barter T1–T7, fast currents animate, sea monster spawn zones. Posizioni allineate alla geografia in-game (NW Margoria, costa Calpheonia/Mediah/Valencia, Crow's Nest centro). Click su qualsiasi marker per dettagli.</p>
 
   <div class="map-filters" id="map-filters" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
     <button class="map-filter active" data-filter="all">🌊 Tutti</button>
@@ -1712,44 +1721,81 @@
     <svg id="sailing-map-svg" viewBox="0 0 1000 700" style="width: 100%; height: auto; max-height: 720px; display: block;" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sailing map of Great Ocean">
       <!-- Defs: gradients, patterns, markers -->
       <defs>
-        <radialGradient id="mapOcean" cx="50%" cy="50%" r="60%">
-          <stop offset="0%" stop-color="#1a3a5c" stop-opacity="0.4"/>
-          <stop offset="100%" stop-color="#0a1929" stop-opacity="0.8"/>
+        <radialGradient id="mapOcean" cx="50%" cy="50%" r="65%">
+          <stop offset="0%" stop-color="#1e4a76" stop-opacity="0.55"/>
+          <stop offset="60%" stop-color="#0f2942" stop-opacity="0.85"/>
+          <stop offset="100%" stop-color="#050f1c" stop-opacity="1"/>
         </radialGradient>
         <pattern id="mapGrid" width="50" height="50" patternUnits="userSpaceOnUse">
-          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(212,165,72,0.08)" stroke-width="0.5"/>
+          <path d="M 50 0 L 0 0 0 50" fill="none" stroke="rgba(212,165,72,0.06)" stroke-width="0.5"/>
         </pattern>
+        <radialGradient id="landMass" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stop-color="#3a2b1a" stop-opacity="0.85"/>
+          <stop offset="80%" stop-color="#1f1610" stop-opacity="0.9"/>
+          <stop offset="100%" stop-color="#1f1610" stop-opacity="0"/>
+        </radialGradient>
         <filter id="mapGlow" x="-50%" y="-50%" width="200%" height="200%">
           <feGaussianBlur stdDeviation="3" result="blur"/>
           <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
         </filter>
-        <marker id="arrowEnd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse">
-          <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(96,165,250,0.7)"/>
+        <filter id="parchmentTint">
+          <feColorMatrix type="matrix" values="0.9 0 0 0 0  0 0.75 0 0 0  0 0 0.55 0 0  0 0 0 0.22 0"/>
+        </filter>
+        <marker id="arrowEnd" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+          <path d="M 0 0 L 10 5 L 0 10 z" fill="#60a5fa"/>
         </marker>
       </defs>
+
       <!-- Ocean background -->
       <rect width="1000" height="700" fill="url(#mapOcean)"/>
-      <rect width="1000" height="700" fill="url(#mapGrid)"/>
-      <!-- Compass rose top-left -->
-      <g transform="translate(70,90)" opacity="0.55">
-        <circle r="36" fill="none" stroke="rgba(212,165,72,0.5)" stroke-width="1"/>
-        <circle r="28" fill="none" stroke="rgba(212,165,72,0.3)" stroke-width="0.5" stroke-dasharray="2 3"/>
-        <polygon points="0,-32 4,0 0,4 -4,0" fill="#f4c96b"/>
-        <polygon points="0,32 4,0 0,-4 -4,0" fill="#d4a548"/>
-        <polygon points="-32,0 0,4 4,0 0,-4" fill="#d4a548"/>
-        <polygon points="32,0 0,4 -4,0 0,-4" fill="#d4a548"/>
-        <text y="-40" font-family="Cinzel,serif" font-size="10" fill="#f4c96b" text-anchor="middle" font-weight="700">N</text>
+
+      <!-- Parchment texture overlay (mappa.webp) — gives "old chart" feel -->
+      <image x="0" y="0" width="1000" height="700" href="/assets/mappa.webp" preserveAspectRatio="xMidYMid slice" filter="url(#parchmentTint)" opacity="0.35" pointer-events="none"/>
+
+      <!-- Continent silhouettes (semi-trasparenti, brown tone) -->
+      <g id="map-landmasses" opacity="0.78" pointer-events="none">
+        <!-- Calpheonia coast (west bank) -->
+        <path d="M 0,150 L 60,160 L 90,210 L 110,260 L 95,310 L 80,360 L 70,420 L 90,470 L 110,520 L 130,560 L 145,610 L 160,660 L 175,700 L 0,700 Z"
+              fill="url(#landMass)" stroke="rgba(139,90,43,0.45)" stroke-width="1.5"/>
+        <!-- Margoria continent (NW expansion: Old Moon Guild Carrack region) -->
+        <path d="M 130,0 L 240,15 L 320,40 L 380,30 L 440,45 L 500,30 L 560,40 L 620,55 L 680,40 L 720,90 L 700,140 L 640,165 L 580,150 L 520,170 L 460,150 L 400,160 L 340,145 L 280,165 L 230,180 L 180,160 L 130,180 L 100,140 L 90,80 L 110,30 Z"
+              fill="url(#landMass)" stroke="rgba(139,90,43,0.5)" stroke-width="1.5"/>
+        <!-- Mediah / Valencia coast (east bank) -->
+        <path d="M 1000,140 L 940,150 L 905,200 L 880,260 L 870,320 L 880,380 L 870,430 L 855,480 L 870,530 L 890,580 L 905,640 L 920,700 L 1000,700 Z"
+              fill="url(#landMass)" stroke="rgba(139,90,43,0.45)" stroke-width="1.5"/>
+        <!-- Small Sanctuary peninsula (SE) -->
+        <path d="M 740,700 L 720,640 L 730,610 L 760,615 L 800,640 L 810,700 Z"
+              fill="url(#landMass)" stroke="rgba(139,90,43,0.4)" stroke-width="1"/>
       </g>
-      <!-- Region labels -->
-      <text x="180" y="50" font-family="Cinzel,serif" font-size="20" fill="rgba(244,201,107,0.45)" letter-spacing="3">CALPHEONIA</text>
-      <text x="500" y="50" font-family="Cinzel,serif" font-size="20" fill="rgba(244,201,107,0.45)" letter-spacing="3" text-anchor="middle">MARGORIA</text>
-      <text x="820" y="50" font-family="Cinzel,serif" font-size="20" fill="rgba(244,201,107,0.45)" letter-spacing="3">VALENCIA</text>
-      <text x="500" y="685" font-family="EB Garamond,serif" font-size="11" fill="rgba(244,228,200,0.4)" text-anchor="middle" font-style="italic">~ Schematic chart · click any marker for details ~</text>
-      <!-- Routes layer (lines between hubs) -->
+
+      <!-- Subtle grid (after landmasses, before nodes) -->
+      <rect width="1000" height="700" fill="url(#mapGrid)" pointer-events="none"/>
+
+      <!-- Compass rose top-right (clear of NW Margoria mass) -->
+      <g transform="translate(890,90)" opacity="0.7" pointer-events="none">
+        <circle r="38" fill="rgba(10,25,41,0.5)" stroke="rgba(212,165,72,0.55)" stroke-width="1"/>
+        <circle r="30" fill="none" stroke="rgba(212,165,72,0.3)" stroke-width="0.5" stroke-dasharray="2 3"/>
+        <polygon points="0,-34 5,0 0,5 -5,0" fill="#f4c96b"/>
+        <polygon points="0,34 5,0 0,-5 -5,0" fill="#d4a548"/>
+        <polygon points="-34,0 0,5 5,0 0,-5" fill="#d4a548"/>
+        <polygon points="34,0 0,5 -5,0 0,-5" fill="#d4a548"/>
+        <text y="-42" font-family="Cinzel,serif" font-size="11" fill="#f4c96b" text-anchor="middle" font-weight="700">N</text>
+      </g>
+
+      <!-- Region labels — riposizionate per coerenza geografica -->
+      <text x="60" y="370" font-family="Cinzel,serif" font-size="14" fill="rgba(244,201,107,0.55)" letter-spacing="3" transform="rotate(-90 60 370)">CALPHEONIA</text>
+      <text x="500" y="280" font-family="Cinzel,serif" font-size="22" fill="rgba(244,201,107,0.55)" letter-spacing="6" text-anchor="middle">MARGORIA</text>
+      <text x="500" y="305" font-family="EB Garamond,serif" font-size="11" fill="rgba(244,228,200,0.45)" text-anchor="middle" font-style="italic" letter-spacing="2">— il Grande Oceano —</text>
+      <text x="945" y="380" font-family="Cinzel,serif" font-size="14" fill="rgba(244,201,107,0.55)" letter-spacing="3" transform="rotate(90 945 380)">VALENCIA</text>
+      <text x="500" y="685" font-family="EB Garamond,serif" font-size="11" fill="rgba(244,228,200,0.4)" text-anchor="middle" font-style="italic">~ Carta del Great Ocean · 16 Apr 2026 · click any marker for details ~</text>
+
+      <!-- Routes layer (shipping lanes) -->
       <g id="map-routes-layer"></g>
-      <!-- Currents layer -->
+      <!-- Monster spawn zones (under nodes/currents, above routes) -->
+      <g id="map-zones-layer"></g>
+      <!-- Fast Currents (animated) -->
       <g id="map-currents-layer"></g>
-      <!-- Nodes layer (top) -->
+      <!-- Nodes layer (top, clickable) -->
       <g id="map-nodes-layer"></g>
     </svg>
     <!-- Detail popup -->
@@ -1763,15 +1809,16 @@
     <summary style="cursor: pointer; color: var(--brass-bright); font-family: 'Cinzel', serif; padding: 8px 0;">📜 Leggenda mappa</summary>
     <div style="background: rgba(15,41,66,0.5); border-radius: 6px; padding: 12px; font-size: 0.88rem; margin-top: 8px;">
       <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px;">
-        <div><strong style="color: #f4c96b;">⚓ Hubs</strong> — porti principali e Crow's Nest</div>
+        <div><strong style="color: #f4c96b;">⚓ Hubs</strong> — Epheria, Velia, Iliya, Ancado, Crow's Nest, Oquilla</div>
         <div><strong style="color: #4ade80;">🟢 T1–T2</strong> — barter coste Calpheonia (200–400 LT)</div>
-        <div><strong style="color: #60a5fa;">🟢 T3–T4</strong> — Olvia/Velia coast (500–750 LT)</div>
+        <div><strong style="color: #60a5fa;">🔵 T3–T4</strong> — Olvia/Iliya coast (500–750 LT)</div>
         <div><strong style="color: #c084fc;">🟣 T5</strong> — Sea Coin barters (1000 LT)</div>
         <div><strong style="color: #fbbf24;">🟡 T5m</strong> — Margoria isole (1000 LT, ~10M silver)</div>
-        <div><strong style="color: #fb923c;">🟠 T6</strong> — L5→L6 (2000 LT, 50M silver, parley 10.675)</div>
-        <div><strong style="color: #f87171;">🔴 T7</strong> — L6→L7 (2000 LT, 100M silver, parley 10.675)</div>
-        <div><strong style="color: #93c5fd;">💨 Fast Currents</strong> — accelerano viaggio</div>
-        <div><strong style="color: #ec4899;">🐙 Sea Monsters</strong> — spawn schedulati</div>
+        <div><strong style="color: #fb923c;">🟠 T6</strong> — L5→L6 (2000 LT, 50M silver, parley 10.675) — NW Margoria + Valencia</div>
+        <div><strong style="color: #f87171;">🔴 T7</strong> — L6→L7 (2000 LT, 100M silver, parley 10.675) — Olvia/Iliya/Sanctuary</div>
+        <div><strong style="color: #60a5fa;">💨 Fast Currents</strong> — frecce animate, +1.7× velocità</div>
+        <div><strong style="color: #ec4899;">🐙 Monster Zones</strong> — aree pulsanti, spawn schedulati</div>
+        <div style="grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid rgba(212,165,72,0.2); font-style: italic; opacity: 0.75;">Continenti in marrone: Calpheonia (W), Margoria (NW), Mediah/Valencia (E). Filtro <strong>💨 Currents</strong> isola le correnti, <strong>🐙 Sea Monsters</strong> isola i marker + zone spawn.</div>
       </div>
     </div>
   </details>
@@ -2517,68 +2564,107 @@ window.toast = function(msg, kind) {
 };
 
 // ============ SAILING MAP (Step 6) — interactive SVG ============
-// Schematic positions (x: 0-1000, y: 0-700). NOT geographic — clarity first.
+// Geographic positions tuned to real BDO Great Ocean layout (Apr 2026):
+// - Calpheonia coast = west strip; Mediah/Valencia coast = east strip
+// - Margoria continent = NW expansion (Hakoven cluster top-left)
+// - Crow's Nest (Apr 2026 hub) = central pivot
+// Reference: GrumpyG sailing maps, BDFoundry ocean guide, in-game world map
 const MAP_NODES = [
-  // Hubs & ports
-  { id: 'epheria',   type: 'hub',     name: 'Epheria Port',     x: 80,  y: 380, info: 'Hub principale Calpheonia. Punto di partenza per Margoria.' },
-  { id: 'velia',     type: 'hub',     name: 'Velia Port',       x: 130, y: 510, info: 'Port iniziale, base ricerche Black Spirit Sea.' },
-  { id: 'iliya',     type: 'hub',     name: 'Iliya Port',       x: 880, y: 280, info: 'Hub Mediah/Valencia. Vicino isole T7 Iliya.' },
-  { id: 'ancado',    type: 'hub',     name: 'Ancado Inner',     x: 870, y: 540, info: 'Port Valencia sud, accesso a Margoria orientale.' },
-  { id: 'crows',     type: 'hub',     name: "Crow's Nest",      x: 500, y: 380, info: 'Nuovo hub centrale (patch 16-Apr-2026). Sede Crow Merchants Guild.' },
-  { id: 'oquilla',   type: 'hub',     name: "Oquilla's Eye",    x: 470, y: 410, info: 'Centro Great Ocean. Quest Old Moon Guild qui.' },
-  // T1-T2 (Calpheonia coast)
-  { id: 'lemoria',   type: 't1-t2',   name: 'Lemoria',          x: 250, y: 420, tier: 'T1', info: 'L1 → L2 trade. ~600k silver/barter, 200 LT.' },
-  { id: 'sausan-1',  type: 't1-t2',   name: 'Sausan Garrison',  x: 280, y: 280, tier: 'T2', info: 'L2 → L3. Post-patch: 800→400 LT. ~1M silver.' },
-  { id: 'staniya',   type: 't1-t2',   name: 'Staniya',          x: 320, y: 480, tier: 'T1', info: 'L1 trade alternativa.' },
-  // T3-T4
-  { id: 'olvia-coast', type: 't3-t4', name: 'Olvia Coast',      x: 200, y: 220, tier: 'T3', info: 'L3 → L4. ~1M silver, 500 LT.' },
-  { id: 'iliya-coast', type: 't3-t4', name: 'Iliya Coast',      x: 800, y: 350, tier: 'T4', info: 'L4 → L5. ~2M silver, 750 LT.' },
-  // T5
-  { id: 'cron-castle', type: 't5',    name: 'Cron Castle',      x: 360, y: 580, tier: 'T5', info: 'L5 → Sea Coin barter. 5M silver, 1000 LT, parley 21.650.' },
-  // T5m (Margoria)
-  { id: 'margoria-c',  type: 't5m',   name: 'Margoria Center',  x: 500, y: 280, tier: 'T5m', info: 'Top tier T1-5: ~10M silver, 1000 LT, parley 14.290. Solo isole Margoria.' },
-  { id: 'margoria-w',  type: 't5m',   name: 'Margoria West',    x: 380, y: 230, tier: 'T5m', info: 'Margoria L5. ~10M silver.' },
-  { id: 'margoria-e',  type: 't5m',   name: 'Margoria East',    x: 620, y: 230, tier: 'T5m', info: 'Margoria L5. ~10M silver.' },
-  // T6 (L5 → L6, 50M silver, 6 nodi)
-  { id: 'hakoven',    type: 't6',     name: 'Hakoven Island',   x: 600, y: 130, tier: 'T6', info: 'L5 → L6. 50M silver, 2000 LT, parley 10.675.' },
-  { id: 'arehaza',    type: 't6',     name: 'Arehaza Town',     x: 750, y: 600, tier: 'T6', info: 'L5 → L6. Valencia coast. 50M silver.' },
-  { id: 'grandiha',   type: 't6',     name: 'Grándiha Island',  x: 820, y: 450, tier: 'T6', info: 'L5 → L6. Vicino Iliya. 50M silver.' },
-  { id: 'starry',     type: 't6',     name: 'Starry-Midnight',  x: 540, y: 90,  tier: 'T6', info: 'L5 → L6. Sea Otters Island. 50M silver.' },
-  { id: 'haemo',      type: 't6',     name: 'Haemo Spire',      x: 350, y: 130, tier: 'T6', info: 'L5 → L6. 50M silver.' },
-  { id: 'dallae',     type: 't6',     name: 'Dallae Coast',     x: 920, y: 400, tier: 'T6', info: 'L5 → L6. 50M silver.' },
-  // T7 (L6 → L7, 100M silver, 6 nodi)
-  { id: 'olvia-t7',   type: 't7',     name: 'Olvia (T7)',       x: 100, y: 280, tier: 'T7', info: 'L6 → L7. 100M silver, 2000 LT, parley 10.675.' },
-  { id: 'epheria-s',  type: 't7',     name: 'Epheria Sentry',   x: 60,  y: 460, tier: 'T7', info: 'L6 → L7. 100M silver.' },
-  { id: 'sausan-t7',  type: 't7',     name: 'Sausan (T7)',      x: 230, y: 180, tier: 'T7', info: 'L6 → L7. 100M silver.' },
-  { id: 'sanctuary',  type: 't7',     name: 'Sanctuary',        x: 660, y: 580, tier: 'T7', info: 'L6 → L7. 100M silver.' },
-  { id: 'iliya-t7',   type: 't7',     name: 'Iliya (T7)',       x: 920, y: 220, tier: 'T7', info: 'L6 → L7. 100M silver.' },
-  { id: 'lema-t7',    type: 't7',     name: 'Lema (T7)',        x: 290, y: 350, tier: 'T7', info: 'L6 → L7. 100M silver.' },
-  // Fast currents (route accelerators)
-  { id: 'fc-east',    type: 'current', name: 'Fast Current E→W', x: 720, y: 350, info: 'Corrente accelera viaggio Iliya → Margoria. Direzione est-ovest.' },
-  { id: 'fc-south',   type: 'current', name: 'Fast Current N→S', x: 470, y: 500, info: "Corrente Crow's Nest → Sanctuary. Direzione nord-sud." },
-  { id: 'fc-west',    type: 'current', name: 'Fast Current W→E', x: 230, y: 380, info: 'Corrente Epheria → Margoria. Direzione ovest-est.' },
-  // Sea monsters
-  { id: 'sm-vell',    type: 'monster', name: 'Vell Spawn',       x: 480, y: 60,  info: 'Vell — World Boss. Spawn programmato (consulta calendario server).' },
-  { id: 'sm-khan',    type: 'monster', name: 'Khan Lair',        x: 580, y: 60,  info: 'Khan — Sea Monster Margoria. Necessita 5 player + Cannons.' },
-  { id: 'sm-ogre',    type: 'monster', name: 'Sea Ogre',         x: 730, y: 180, info: 'Sea Ogre — Margoria. Dropping Cron Stone Box.' }
+  // ===== HUBS (porti chiave) =====
+  { id: 'velia',     type: 'hub',     name: 'Velia Port',       x: 105, y: 555, info: 'Port starter Calpheonia sud. Base storica per principianti del mare.' },
+  { id: 'epheria',   type: 'hub',     name: 'Epheria Port',     x: 95,  y: 405, info: 'Hub principale Calpheonia. Cantiere Carrack/Caravel/Galleass. Punto di partenza per Margoria.' },
+  { id: 'iliya',     type: 'hub',     name: 'Iliya Port',       x: 905, y: 320, info: 'Hub Mediah/Valencia. Cluster T7 Iliya nelle vicinanze.' },
+  { id: 'ancado',    type: 'hub',     name: 'Ancado Inner',     x: 895, y: 590, info: 'Port Valencia sud, accesso a Margoria orientale e nodi Arehaza.' },
+  { id: 'crows',     type: 'hub',     name: "Crow's Nest",      x: 500, y: 365, info: 'NUOVO hub centrale (patch 16-Apr-2026). Sede Crow Merchants Guild, snodo per T6/T7.' },
+  { id: 'oquilla',   type: 'hub',     name: "Oquilla's Eye",    x: 470, y: 415, info: 'Centro Great Ocean storico. Quest Old Moon Guild e Vell calendar qui.' },
+
+  // ===== T1-T2 (Calpheonia coast vicinissima) =====
+  { id: 'lemoria',   type: 't1-t2',   name: 'Lemoria',          x: 165, y: 470, tier: 'T1', info: 'L1 → L2 trade. ~600k silver/barter, 200 LT.' },
+  { id: 'sausan-1',  type: 't1-t2',   name: 'Sausan Garrison',  x: 195, y: 365, tier: 'T2', info: 'L2 → L3. Post-patch 16-Apr-2026: 800 → 400 LT. ~1M silver.' },
+  { id: 'staniya',   type: 't1-t2',   name: 'Staniya Sea',      x: 175, y: 510, tier: 'T1', info: 'L1 trade alternativa lungo la costa Calpheonia sud.' },
+
+  // ===== T3-T4 =====
+  { id: 'olvia-coast', type: 't3-t4', name: 'Olvia Coast',      x: 145, y: 280, tier: 'T3', info: 'L3 → L4. ~1M silver, 500 LT. Costa nord-Calpheonia.' },
+  { id: 'iliya-coast', type: 't3-t4', name: 'Iliya Coast',      x: 825, y: 380, tier: 'T4', info: 'L4 → L5. ~2M silver, 750 LT. Costa Mediah orientale.' },
+
+  // ===== T5 (Sea Coin) =====
+  { id: 'cron-castle', type: 't5',    name: 'Cron Castle',      x: 320, y: 615, tier: 'T5', info: 'L5 → Sea Coin barter. 5M silver, 1000 LT, parley 21.650. Sud Calpheonia.' },
+
+  // ===== T5m (Margoria, isole centrali) =====
+  { id: 'margoria-w',  type: 't5m',   name: 'Margoria West',    x: 350, y: 270, tier: 'T5m', info: 'Margoria L5 ovest. ~10M silver, 1000 LT, parley 14.290.' },
+  { id: 'margoria-c',  type: 't5m',   name: 'Margoria Center',  x: 490, y: 250, tier: 'T5m', info: 'Margoria L5 centro. ~10M silver. Solo isole Margoria.' },
+  { id: 'margoria-e',  type: 't5m',   name: 'Margoria East',    x: 635, y: 280, tier: 'T5m', info: 'Margoria L5 est. ~10M silver. Vicino correnti.' },
+
+  // ===== T6 (L5 → L6, 50M silver, parley 10.675) =====
+  // NW Margoria cluster (vicino Old Moon Guild Carrack, Port Ratt area)
+  { id: 'haemo',      type: 't6',     name: 'Haemo Spire',      x: 280, y: 130, tier: 'T6', info: 'L5 → L6. NW Margoria, vicino Old Moon Guild Carrack. 50M silver, 2000 LT.' },
+  { id: 'starry',     type: 't6',     name: 'Starry-Midnight',  x: 405, y: 80,  tier: 'T6', info: 'L5 → L6. Sea Otters Island, far north. 50M silver.' },
+  { id: 'hakoven',    type: 't6',     name: 'Hakoven Island',   x: 555, y: 95,  tier: 'T6', info: 'L5 → L6. Best Crow Coin exchange (BiS). Far north Margoria. 50M silver.' },
+  // Valencia/Mediah cluster
+  { id: 'grandiha',   type: 't6',     name: 'Grándiha Island',  x: 805, y: 460, tier: 'T6', info: 'L5 → L6. Vicino Iliya. 50M silver, 2000 LT.' },
+  { id: 'arehaza',    type: 't6',     name: 'Arehaza Town',     x: 770, y: 625, tier: 'T6', info: 'L5 → L6. Valencia coast sud. 50M silver.' },
+  { id: 'dallae',     type: 't6',     name: 'Dallae Coast',     x: 930, y: 430, tier: 'T6', info: 'L5 → L6. Costa Valencia est. 50M silver.' },
+
+  // ===== T7 (L6 → L7, 100M silver, parley 10.675) =====
+  // NW Margoria (estremo nord)
+  { id: 'sausan-t7',  type: 't7',     name: 'Sausan (T7)',      x: 230, y: 195, tier: 'T7', info: 'L6 → L7. NW Margoria. 100M silver, 2000 LT.' },
+  { id: 'olvia-t7',   type: 't7',     name: 'Olvia (T7)',       x: 80,  y: 235, tier: 'T7', info: 'L6 → L7. Costa nord Calpheonia. 100M silver.' },
+  { id: 'epheria-s',  type: 't7',     name: 'Epheria Sentry',   x: 75,  y: 460, tier: 'T7', info: 'L6 → L7. Sentinella Epheria. 100M silver.' },
+  // Centro/sud
+  { id: 'lema-t7',    type: 't7',     name: 'Lema (T7)',        x: 215, y: 205, tier: 'T7', info: 'L6 → L7. Lema Island, scalo per Port Ratt. 100M silver.' },
+  // East
+  { id: 'iliya-t7',   type: 't7',     name: 'Iliya (T7)',       x: 935, y: 250, tier: 'T7', info: 'L6 → L7. Cluster Iliya islands. 100M silver.' },
+  { id: 'sanctuary',  type: 't7',     name: 'Sanctuary',        x: 700, y: 615, tier: 'T7', info: 'L6 → L7. SE Margoria. 100M silver.' },
+
+  // ===== Sea monsters (point markers; spawn zones rendered as overlay) =====
+  { id: 'sm-vell',    type: 'monster', name: 'Vell Spawn',       x: 470, y: 50,  info: 'Vell — World Boss. Spawn 2x/settimana (Sab/Dom 22:00 server). Cron Castle waters.' },
+  { id: 'sm-khan',    type: 'monster', name: 'Khan Lair',        x: 605, y: 60,  info: 'Khan — Sea Monster Margoria centro-nord. Necessita 5+ player + Ship Cannons.' },
+  { id: 'sm-ogre',    type: 'monster', name: 'Sea Ogre',         x: 760, y: 175, info: 'Sea Ogre — NE Margoria. Drop Cron Stone Box.' }
 ];
 
-// Routes: lines drawn between nodes
+// Fast currents (overlay paths, NOT point nodes) — animated arrows
+// Source: GrumpyG community + in-game observation (1.7x speed boost)
+const MAP_CURRENTS = [
+  { id: 'fc-w-e',  name: 'Corrente W→E', d: 'M 200 405 Q 320 360 460 380', dir: 'forward',  desc: 'Da Epheria a Margoria centro' },
+  { id: 'fc-e-w',  name: 'Corrente E→W', d: 'M 820 360 Q 690 320 540 350', dir: 'forward',  desc: 'Da Iliya a Crow\'s Nest' },
+  { id: 'fc-n-s',  name: 'Corrente N→S', d: 'M 510 200 Q 530 380 690 580', dir: 'forward',  desc: 'Da Margoria centro a Sanctuary' },
+  { id: 'fc-nw',   name: 'Corrente NW',  d: 'M 460 360 Q 350 240 280 150', dir: 'forward',  desc: 'Da Crow\'s Nest a Old Moon Guild Carrack (Port Ratt area)' }
+];
+
+// Sea monster spawn zones (semi-transparent ellipses + pulse animation)
+const MAP_MONSTER_ZONES = [
+  { id: 'zone-vell', cx: 470, cy: 60,  rx: 90, ry: 50, color: '#ec4899', label: 'Vell Zone' },
+  { id: 'zone-khan', cx: 605, cy: 70,  rx: 70, ry: 45, color: '#a855f7', label: 'Khan Zone' },
+  { id: 'zone-ogre', cx: 760, cy: 180, rx: 75, ry: 40, color: '#f97316', label: 'Ogre Zone' }
+];
+
+// Routes: lines drawn between nodes (shipping lanes — collegamenti hub→destinazione)
 const MAP_ROUTES = [
+  // Calpheonia hub → centro
   { from: 'epheria', to: 'oquilla' },
-  { from: 'velia', to: 'oquilla' },
-  { from: 'iliya', to: 'oquilla' },
-  { from: 'ancado', to: 'oquilla' },
+  { from: 'velia',   to: 'oquilla' },
+  // East hub → centro
+  { from: 'iliya',   to: 'oquilla' },
+  { from: 'ancado',  to: 'oquilla' },
+  // Centro: Oquilla ↔ Crow's Nest
   { from: 'oquilla', to: 'crows' },
-  { from: 'crows', to: 'margoria-c' },
-  { from: 'crows', to: 'margoria-w' },
-  { from: 'crows', to: 'margoria-e' },
-  { from: 'margoria-c', to: 'hakoven' },
-  { from: 'margoria-c', to: 'starry' },
+  // Crow's Nest → Margoria centrale
+  { from: 'crows',     to: 'margoria-c' },
+  { from: 'crows',     to: 'margoria-w' },
+  { from: 'crows',     to: 'margoria-e' },
+  // Margoria → T6 NW cluster
   { from: 'margoria-w', to: 'haemo' },
+  { from: 'margoria-c', to: 'starry' },
+  { from: 'margoria-c', to: 'hakoven' },
+  // Margoria → T6 East cluster
   { from: 'margoria-e', to: 'grandiha' },
-  { from: 'crows', to: 'arehaza' },
-  { from: 'crows', to: 'sanctuary' }
+  { from: 'iliya',      to: 'dallae' },
+  { from: 'ancado',     to: 'arehaza' },
+  // Crow's Nest → SE T7
+  { from: 'crows',      to: 'sanctuary' },
+  // Calpheonia coast lanes
+  { from: 'epheria',    to: 'olvia-coast' },
+  { from: 'velia',      to: 'cron-castle' }
 ];
 
 const MAP_TYPE_STYLE = {
@@ -2589,7 +2675,6 @@ const MAP_TYPE_STYLE = {
   t5m:       { color: '#fbbf24', size: 11, icon: '',   stroke: '#92400e' },
   t6:        { color: '#fb923c', size: 12, icon: '',   stroke: '#9a3412' },
   t7:        { color: '#f87171', size: 13, icon: '',   stroke: '#7f1d1d' },
-  current:   { color: '#93c5fd', size: 8,  icon: '💨', stroke: '#3b82f6' },
   monster:   { color: '#ec4899', size: 11, icon: '🐙', stroke: '#831843' }
 };
 
@@ -2599,15 +2684,42 @@ let _mapRendered = false;
 function renderSailingMap() {
   const nodesLayer = document.getElementById('map-nodes-layer');
   const routesLayer = document.getElementById('map-routes-layer');
+  const currentsLayer = document.getElementById('map-currents-layer');
+  const zonesLayer = document.getElementById('map-zones-layer');
   if (!nodesLayer || !routesLayer) return;
-  // Routes
+
+  // Routes (shipping lanes)
   const nodeById = Object.fromEntries(MAP_NODES.map(n => [n.id, n]));
   routesLayer.innerHTML = MAP_ROUTES.map(r => {
     const a = nodeById[r.from], b = nodeById[r.to];
     if (!a || !b) return '';
     return `<line class="map-route-line" data-from="${r.from}" data-to="${r.to}" x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" stroke="rgba(212,165,72,0.28)" stroke-width="1.5" stroke-dasharray="4 4"/>`;
   }).join('');
-  // Nodes
+
+  // Monster spawn zones (semi-transparent ellipses with pulse)
+  if (zonesLayer) {
+    zonesLayer.innerHTML = MAP_MONSTER_ZONES.map(z => `
+      <g class="map-zone" data-id="${z.id}">
+        <ellipse cx="${z.cx}" cy="${z.cy}" rx="${z.rx}" ry="${z.ry}" fill="${z.color}" fill-opacity="0.13" stroke="${z.color}" stroke-width="1" stroke-dasharray="3 4" stroke-opacity="0.55">
+          <animate attributeName="fill-opacity" values="0.08;0.18;0.08" dur="3.5s" repeatCount="indefinite"/>
+        </ellipse>
+        <text x="${z.cx}" y="${z.cy - z.ry - 6}" font-family="Cinzel,serif" font-size="9" fill="${z.color}" text-anchor="middle" font-weight="700" letter-spacing="2" opacity="0.75" pointer-events="none">${z.label.toUpperCase()}</text>
+      </g>`).join('');
+  }
+
+  // Fast Currents (animated dashed paths with arrow markers)
+  if (currentsLayer) {
+    currentsLayer.innerHTML = MAP_CURRENTS.map(c => `
+      <g class="map-current" data-id="${c.id}">
+        <path d="${c.d}" fill="none" stroke="rgba(96,165,250,0.18)" stroke-width="9" stroke-linecap="round"/>
+        <path d="${c.d}" fill="none" stroke="#60a5fa" stroke-width="2.5" stroke-dasharray="9 6" stroke-linecap="round" marker-end="url(#arrowEnd)" opacity="0.85">
+          <animate attributeName="stroke-dashoffset" from="0" to="-30" dur="1.4s" repeatCount="indefinite"/>
+        </path>
+        <title>${c.name} — ${c.desc}</title>
+      </g>`).join('');
+  }
+
+  // Nodes (top layer)
   nodesLayer.innerHTML = MAP_NODES.map(n => {
     const st = MAP_TYPE_STYLE[n.type] || MAP_TYPE_STYLE.hub;
     const labelOffset = st.size + 14;
@@ -2619,6 +2731,7 @@ function renderSailingMap() {
         <title>${n.name} — click per dettagli</title>
       </g>`;
   }).join('');
+
   // Apply current filter
   applyMapFilter(_mapFilter);
   _mapRendered = true;
@@ -2629,12 +2742,13 @@ window.applyMapFilter = function(filter) {
   document.querySelectorAll('.map-filter').forEach(b => {
     b.classList.toggle('active', b.dataset.filter === filter);
   });
+  // Nodes
   document.querySelectorAll('.map-node').forEach(n => {
     const t = n.dataset.type;
     const visible = filter === 'all' || t === filter;
     n.classList.toggle('dimmed', !visible);
   });
-  // Dim routes if either endpoint is dimmed
+  // Routes — dim if either endpoint dimmed
   document.querySelectorAll('.map-route-line').forEach(line => {
     const from = line.dataset.from, to = line.dataset.to;
     const fromNode = document.querySelector(`.map-node[data-id="${from}"]`);
@@ -2642,6 +2756,12 @@ window.applyMapFilter = function(filter) {
     const dim = (fromNode?.classList.contains('dimmed')) || (toNode?.classList.contains('dimmed'));
     line.classList.toggle('dimmed', dim);
   });
+  // Currents layer — visible when 'all' or 'current'
+  const currentsLayer = document.getElementById('map-currents-layer');
+  if (currentsLayer) currentsLayer.classList.toggle('dimmed', !(filter === 'all' || filter === 'current'));
+  // Monster zones layer — visible when 'all' or 'monster'
+  const zonesLayer = document.getElementById('map-zones-layer');
+  if (zonesLayer) zonesLayer.classList.toggle('dimmed', !(filter === 'all' || filter === 'monster'));
 };
 
 window.showMapDetail = function(id) {
