@@ -1089,6 +1089,61 @@
   #map-container:fullscreen .map-zoom-hint::after {
     content: ' · ESC per uscire';
   }
+  /* View toggle (SVG vs Live iframe) */
+  .map-view-toggle {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 10px;
+    padding: 4px;
+    background: rgba(10,25,41,0.55);
+    border: 1px solid rgba(212,165,72,0.25);
+    border-radius: 6px;
+    width: fit-content;
+  }
+  .map-view-btn {
+    padding: 6px 14px;
+    background: transparent;
+    color: var(--parchment);
+    border: 1px solid transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .map-view-btn:hover { color: var(--brass-bright); }
+  .map-view-btn.active {
+    background: linear-gradient(180deg, var(--brass), #8b5a2b);
+    color: var(--ink);
+    font-weight: 700;
+    border-color: var(--brass-bright);
+    box-shadow: 0 0 10px rgba(244,201,107,0.35);
+  }
+  /* Live (iframe) container */
+  .map-live-container { background: #0a1929; }
+  .map-live-credit {
+    text-align: center;
+    font-size: 0.75rem;
+    padding: 6px 10px;
+    background: rgba(10,25,41,0.85);
+    color: rgba(244,228,200,0.7);
+    border-top: 1px solid rgba(212,165,72,0.25);
+    font-style: italic;
+  }
+  .map-live-credit a { color: var(--brass-bright); }
+  /* Fullscreen mode for iframe view */
+  .map-live-container:fullscreen {
+    background: #050f1c;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .map-live-container:fullscreen iframe {
+    flex: 1;
+    height: auto !important;
+  }
   /* ============ ONBOARDING TOUR (Step 4) ============ */
   #tour-overlay {
     position: fixed; inset: 0;
@@ -1792,6 +1847,12 @@
   <h2>🗺️ Sailing Map — Great Ocean</h2>
   <p class="hint">Carta del Great Ocean post-patch 16-Apr-2026: hub, nodi barter T1–T7, fast currents animate, sea monster spawn zones. Posizioni allineate alla geografia in-game (NW Margoria, costa Calpheonia/Mediah/Valencia, Crow's Nest centro). Click su qualsiasi marker per dettagli.</p>
 
+  <!-- View mode toggle: classic SVG vs live BDOfish Leaflet map -->
+  <div class="map-view-toggle" role="tablist" aria-label="Modalità mappa">
+    <button class="map-view-btn active" id="map-view-svg" data-view="svg" role="tab" aria-selected="true">🎨 Vista Classica</button>
+    <button class="map-view-btn" id="map-view-live" data-view="live" role="tab" aria-selected="false">🌍 Mappa Live (BDOfish)</button>
+  </div>
+
   <div class="map-filters" id="map-filters" style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 12px;">
     <button class="map-filter active" data-filter="all">🌊 Tutti</button>
     <button class="map-filter" data-filter="hub">⚓ Hubs</button>
@@ -1899,6 +1960,14 @@
     <div id="map-detail" style="position: absolute; top: 16px; right: 16px; width: 280px; max-width: calc(100% - 32px); background: linear-gradient(180deg, var(--bg-panel), var(--bg-ocean)); border: 1.5px solid var(--brass); border-radius: 6px; padding: 14px 16px; color: var(--parchment); display: none; box-shadow: 0 8px 24px rgba(0,0,0,0.5); z-index: 5;">
       <button onclick="closeMapDetail()" style="position: absolute; top: 6px; right: 8px; background: transparent; border: none; color: var(--brass-bright); font-size: 1.2rem; cursor: pointer; padding: 0; width: 24px; height: 24px;" aria-label="Chiudi">×</button>
       <div id="map-detail-body"></div>
+    </div>
+  </div>
+
+  <!-- Live BDOfish iframe view (lazy-loaded on toggle) -->
+  <div class="map-live-container" id="map-live-container" style="display: none; border: 2px solid var(--brass); border-radius: 8px; overflow: hidden; position: relative; box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.4);">
+    <iframe id="map-live-iframe" src="about:blank" loading="lazy" referrerpolicy="no-referrer-when-downgrade" title="BDOfish interactive map" style="width: 100%; height: 720px; border: 0; display: block; background: #0a1929;"></iframe>
+    <div class="map-live-credit">
+      Tile data &amp; markers: <a href="https://bdofish.com/" target="_blank" rel="noopener">bdofish.com</a> · Leaflet · CC-BY community project
     </div>
   </div>
 
@@ -3090,6 +3159,36 @@ function initSailingMap() {
     const hint = document.getElementById('map-zoom-hint');
     if (hint) hint.classList.add('faded');
   }, 6000);
+
+  // ===== VIEW TOGGLE: SVG ↔ BDOfish iframe =====
+  const svgView   = document.getElementById('map-container');
+  const liveView  = document.getElementById('map-live-container');
+  const liveFrame = document.getElementById('map-live-iframe');
+  const filtersEl = document.getElementById('map-filters');
+  const toolbarEl = document.getElementById('map-toolbar');
+  const hintEl    = document.getElementById('map-zoom-hint');
+  const btnSvg    = document.getElementById('map-view-svg');
+  const btnLive   = document.getElementById('map-view-live');
+  let _liveLoaded = false;
+
+  function setMapView(mode) {
+    const isLive = mode === 'live';
+    if (isLive && !_liveLoaded) {
+      // Lazy load BDOfish iframe — saves bandwidth until requested
+      liveFrame.src = 'https://bdofish.com/';
+      _liveLoaded = true;
+    }
+    svgView.style.display  = isLive ? 'none' : '';
+    liveView.style.display = isLive ? '' : 'none';
+    // Hide our SVG-only filter chrome in live mode (BDOfish has its own)
+    if (filtersEl) filtersEl.style.display = isLive ? 'none' : '';
+    btnSvg.classList.toggle('active', !isLive);
+    btnLive.classList.toggle('active', isLive);
+    btnSvg.setAttribute('aria-selected', !isLive);
+    btnLive.setAttribute('aria-selected', isLive);
+  }
+  btnSvg?.addEventListener('click', () => setMapView('svg'));
+  btnLive?.addEventListener('click', () => setMapView('live'));
 }
 
 // ============ THEME SWITCHER (Step 5) ============
