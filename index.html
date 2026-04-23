@@ -1001,6 +1001,93 @@
   @media (prefers-reduced-motion: reduce) {
     .map-current animate, .map-zone animate { animation: none; }
   }
+  /* Zoom toolbar (top-left of map) */
+  .map-toolbar {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    display: flex;
+    gap: 4px;
+    z-index: 6;
+    background: rgba(10,25,41,0.85);
+    border: 1px solid rgba(212,165,72,0.4);
+    border-radius: 6px;
+    padding: 4px;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+  }
+  .map-zoom-btn {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(180deg, rgba(15,41,66,0.9), rgba(10,25,41,1));
+    color: var(--brass-bright);
+    border: 1px solid rgba(212,165,72,0.4);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Cinzel', serif;
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s;
+    padding: 0;
+  }
+  .map-zoom-btn:hover {
+    background: linear-gradient(180deg, var(--brass), #8b5a2b);
+    color: var(--ink);
+    border-color: var(--brass-bright);
+    box-shadow: 0 0 8px rgba(244,201,107,0.5);
+  }
+  .map-zoom-btn:active { transform: scale(0.92); }
+  .map-zoom-hint {
+    position: absolute;
+    bottom: 10px;
+    left: 12px;
+    z-index: 5;
+    background: rgba(10,25,41,0.7);
+    color: rgba(244,228,200,0.7);
+    font-size: 0.72rem;
+    font-style: italic;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid rgba(212,165,72,0.2);
+    pointer-events: none;
+    transition: opacity 0.4s ease;
+  }
+  .map-zoom-hint.faded { opacity: 0; }
+  /* Grabbing cursor while panning */
+  #sailing-map-svg.grabbing { cursor: grabbing !important; }
+  /* Fullscreen state — fills viewport */
+  #map-container:fullscreen {
+    background: linear-gradient(180deg, #050f1c 0%, #0a1929 100%);
+    border: none;
+    border-radius: 0;
+    padding: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  #map-container:fullscreen #sailing-map-svg {
+    max-height: 100vh;
+    max-width: 100vw;
+    width: auto;
+    height: auto;
+  }
+  #map-container:-webkit-full-screen {
+    background: linear-gradient(180deg, #050f1c 0%, #0a1929 100%);
+    padding: 24px;
+  }
+  #map-container:-webkit-full-screen #sailing-map-svg {
+    max-height: 100vh;
+    max-width: 100vw;
+  }
+  /* Fullscreen-only escape hint */
+  #map-container:fullscreen .map-zoom-hint::after {
+    content: ' · ESC per uscire';
+  }
   /* ============ ONBOARDING TOUR (Step 4) ============ */
   #tour-overlay {
     position: fixed; inset: 0;
@@ -1717,8 +1804,16 @@
     <button class="map-filter" data-filter="monster">🐙 Sea Monsters</button>
   </div>
 
-  <div class="map-container" style="background: linear-gradient(180deg, #0a1929 0%, #0f2942 60%, #1a3a5c 100%); border: 2px solid var(--brass); border-radius: 8px; padding: 0; position: relative; overflow: hidden; box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.4);">
-    <svg id="sailing-map-svg" viewBox="0 0 1000 700" style="width: 100%; height: auto; max-height: 720px; display: block;" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sailing map of Great Ocean">
+  <div class="map-container" id="map-container" style="background: linear-gradient(180deg, #0a1929 0%, #0f2942 60%, #1a3a5c 100%); border: 2px solid var(--brass); border-radius: 8px; padding: 0; position: relative; overflow: hidden; box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 4px 16px rgba(0,0,0,0.4);">
+    <!-- Zoom & fullscreen toolbar (top-left) -->
+    <div class="map-toolbar" id="map-toolbar" aria-label="Zoom controls">
+      <button class="map-zoom-btn" id="map-zoom-in"  title="Zoom in (+)" aria-label="Zoom in">+</button>
+      <button class="map-zoom-btn" id="map-zoom-out" title="Zoom out (-)" aria-label="Zoom out">−</button>
+      <button class="map-zoom-btn" id="map-zoom-reset" title="Reset (0)" aria-label="Reset zoom">⟲</button>
+      <button class="map-zoom-btn" id="map-fullscreen" title="Fullscreen (F)" aria-label="Fullscreen">⛶</button>
+    </div>
+    <div class="map-zoom-hint" id="map-zoom-hint">Scroll per zoom · Drag per pan · F per fullscreen</div>
+    <svg id="sailing-map-svg" viewBox="0 0 1000 700" style="width: 100%; height: auto; max-height: 720px; display: block; cursor: grab;" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sailing map of Great Ocean">
       <!-- Defs: gradients, patterns, markers -->
       <defs>
         <radialGradient id="mapOcean" cx="50%" cy="50%" r="65%">
@@ -2787,6 +2882,88 @@ window.closeMapDetail = function() {
   document.getElementById('map-detail').style.display = 'none';
 };
 
+// ============ MAP ZOOM & PAN STATE ============
+const MAP_VIEW_DEFAULT = { x: 0, y: 0, w: 1000, h: 700 };
+let _mapView = { ...MAP_VIEW_DEFAULT };
+const MAP_ZOOM_MIN = 0.4;   // zoomed-out cap (sees more than 100%)
+const MAP_ZOOM_MAX = 6;     // zoomed-in cap
+
+function applyMapView() {
+  const svg = document.getElementById('sailing-map-svg');
+  if (!svg) return;
+  svg.setAttribute('viewBox', `${_mapView.x} ${_mapView.y} ${_mapView.w} ${_mapView.h}`);
+}
+
+function clampView() {
+  // Compute current zoom factor relative to default
+  const zoom = MAP_VIEW_DEFAULT.w / _mapView.w;
+  if (zoom < MAP_ZOOM_MIN) {
+    const scale = MAP_VIEW_DEFAULT.w / (MAP_VIEW_DEFAULT.w / MAP_ZOOM_MIN);
+    _mapView.w = MAP_VIEW_DEFAULT.w / MAP_ZOOM_MIN;
+    _mapView.h = MAP_VIEW_DEFAULT.h / MAP_ZOOM_MIN;
+  }
+  if (zoom > MAP_ZOOM_MAX) {
+    _mapView.w = MAP_VIEW_DEFAULT.w / MAP_ZOOM_MAX;
+    _mapView.h = MAP_VIEW_DEFAULT.h / MAP_ZOOM_MAX;
+  }
+  // Pan bounds: allow some overshoot so user can re-center easily
+  const overshoot = 200;
+  const minX = -overshoot, maxX = MAP_VIEW_DEFAULT.w - _mapView.w + overshoot;
+  const minY = -overshoot, maxY = MAP_VIEW_DEFAULT.h - _mapView.h + overshoot;
+  _mapView.x = Math.max(minX, Math.min(maxX, _mapView.x));
+  _mapView.y = Math.max(minY, Math.min(maxY, _mapView.y));
+}
+
+function zoomMapAt(svgX, svgY, factor) {
+  // Zoom centered on the point (svgX, svgY) in current viewBox space
+  const newW = _mapView.w / factor;
+  const newH = _mapView.h / factor;
+  // Keep (svgX, svgY) at the same screen position
+  _mapView.x = svgX - (svgX - _mapView.x) * (newW / _mapView.w);
+  _mapView.y = svgY - (svgY - _mapView.y) * (newH / _mapView.h);
+  _mapView.w = newW;
+  _mapView.h = newH;
+  clampView();
+  applyMapView();
+}
+
+window.zoomMapButton = function(direction) {
+  // Center-of-view zoom for buttons
+  const cx = _mapView.x + _mapView.w / 2;
+  const cy = _mapView.y + _mapView.h / 2;
+  zoomMapAt(cx, cy, direction === 'in' ? 1.4 : 1 / 1.4);
+};
+
+window.resetMapView = function() {
+  _mapView = { ...MAP_VIEW_DEFAULT };
+  applyMapView();
+};
+
+window.toggleMapFullscreen = function() {
+  const container = document.getElementById('map-container');
+  if (!container) return;
+  const isFs = document.fullscreenElement || document.webkitFullscreenElement;
+  if (isFs) {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  } else {
+    if (container.requestFullscreen) container.requestFullscreen().catch(() => toast('Fullscreen non disponibile', 'warn'));
+    else if (container.webkitRequestFullscreen) container.webkitRequestFullscreen();
+    else toast('Fullscreen non supportato', 'warn');
+  }
+};
+
+function screenToSvg(svg, clientX, clientY) {
+  // Convert screen coords → SVG viewBox coords
+  const pt = svg.createSVGPoint();
+  pt.x = clientX;
+  pt.y = clientY;
+  const ctm = svg.getScreenCTM();
+  if (!ctm) return { x: 0, y: 0 };
+  const p = pt.matrixTransform(ctm.inverse());
+  return { x: p.x, y: p.y };
+}
+
 function initSailingMap() {
   // Filter buttons
   document.querySelectorAll('.map-filter').forEach(btn => {
@@ -2799,6 +2976,117 @@ function initSailingMap() {
       if (!_mapRendered) renderSailingMap();
     });
   }
+
+  // ===== ZOOM & PAN =====
+  const svg = document.getElementById('sailing-map-svg');
+  const container = document.getElementById('map-container');
+  if (!svg || !container) return;
+
+  // Toolbar buttons
+  document.getElementById('map-zoom-in')?.addEventListener('click', () => zoomMapButton('in'));
+  document.getElementById('map-zoom-out')?.addEventListener('click', () => zoomMapButton('out'));
+  document.getElementById('map-zoom-reset')?.addEventListener('click', () => resetMapView());
+  document.getElementById('map-fullscreen')?.addEventListener('click', () => toggleMapFullscreen());
+
+  // Wheel zoom (centered on cursor)
+  svg.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const { x, y } = screenToSvg(svg, e.clientX, e.clientY);
+    const factor = e.deltaY < 0 ? 1.18 : 1 / 1.18;
+    zoomMapAt(x, y, factor);
+  }, { passive: false });
+
+  // Drag pan
+  let dragging = false;
+  let lastClient = { x: 0, y: 0 };
+  let movedDuringDrag = false;
+  svg.addEventListener('pointerdown', (e) => {
+    // Don't start drag if clicking a node (let click handler fire)
+    if (e.target.closest('.map-node')) return;
+    dragging = true;
+    movedDuringDrag = false;
+    lastClient = { x: e.clientX, y: e.clientY };
+    svg.classList.add('grabbing');
+    svg.setPointerCapture?.(e.pointerId);
+  });
+  svg.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastClient.x;
+    const dy = e.clientY - lastClient.y;
+    if (Math.abs(dx) + Math.abs(dy) > 3) movedDuringDrag = true;
+    // Translate screen px → SVG units using current zoom
+    const rect = svg.getBoundingClientRect();
+    const scaleX = _mapView.w / rect.width;
+    const scaleY = _mapView.h / rect.height;
+    _mapView.x -= dx * scaleX;
+    _mapView.y -= dy * scaleY;
+    clampView();
+    applyMapView();
+    lastClient = { x: e.clientX, y: e.clientY };
+  });
+  const endDrag = (e) => {
+    if (!dragging) return;
+    dragging = false;
+    svg.classList.remove('grabbing');
+    svg.releasePointerCapture?.(e.pointerId);
+  };
+  svg.addEventListener('pointerup', endDrag);
+  svg.addEventListener('pointercancel', endDrag);
+  svg.addEventListener('pointerleave', endDrag);
+
+  // Suppress node click if user dragged
+  svg.addEventListener('click', (e) => {
+    if (movedDuringDrag) {
+      e.stopPropagation();
+      e.preventDefault();
+      movedDuringDrag = false;
+    }
+  }, true);
+
+  // Touch pinch-to-zoom (2-finger gesture)
+  let pinch = null;
+  svg.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      const cx = (a.clientX + b.clientX) / 2;
+      const cy = (a.clientY + b.clientY) / 2;
+      const dist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      pinch = { dist, cx, cy };
+    }
+  }, { passive: true });
+  svg.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 2 && pinch) {
+      e.preventDefault();
+      const [a, b] = e.touches;
+      const newDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY);
+      const factor = newDist / pinch.dist;
+      const cx = (a.clientX + b.clientX) / 2;
+      const cy = (a.clientY + b.clientY) / 2;
+      const { x, y } = screenToSvg(svg, cx, cy);
+      zoomMapAt(x, y, factor);
+      pinch.dist = newDist;
+    }
+  }, { passive: false });
+  svg.addEventListener('touchend', () => { pinch = null; });
+
+  // Keyboard shortcuts (only when map tab active)
+  document.addEventListener('keydown', (e) => {
+    const mapPanel = document.getElementById('panel-map');
+    if (!mapPanel || !mapPanel.classList.contains('active')) return;
+    // Skip if typing in input
+    const tag = (e.target.tagName || '').toLowerCase();
+    if (tag === 'input' || tag === 'textarea') return;
+    if (e.key === '+' || e.key === '=') { e.preventDefault(); zoomMapButton('in'); }
+    else if (e.key === '-' || e.key === '_') { e.preventDefault(); zoomMapButton('out'); }
+    else if (e.key === '0') { e.preventDefault(); resetMapView(); }
+    else if (e.key === 'f' || e.key === 'F') { e.preventDefault(); toggleMapFullscreen(); }
+  });
+
+  // Fade hint after 6s
+  setTimeout(() => {
+    const hint = document.getElementById('map-zoom-hint');
+    if (hint) hint.classList.add('faded');
+  }, 6000);
 }
 
 // ============ THEME SWITCHER (Step 5) ============
