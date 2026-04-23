@@ -1042,6 +1042,7 @@
     box-shadow: 0 0 8px rgba(244,201,107,0.5);
   }
   .map-zoom-btn:active { transform: scale(0.92); }
+  a.map-zoom-btn { text-decoration: none; font-size: 0.95rem; }
   .map-zoom-hint {
     position: absolute;
     bottom: 10px;
@@ -1811,6 +1812,7 @@
       <button class="map-zoom-btn" id="map-zoom-out" title="Zoom out (-)" aria-label="Zoom out">−</button>
       <button class="map-zoom-btn" id="map-zoom-reset" title="Reset (0)" aria-label="Reset zoom">⟲</button>
       <button class="map-zoom-btn" id="map-fullscreen" title="Fullscreen (F)" aria-label="Fullscreen">⛶</button>
+      <a class="map-zoom-btn map-external" href="https://www.blackdesertfoundry.com/map/#4/-8.89/-25.22" target="_blank" rel="noopener" title="Apri mappa interattiva BDFoundry in nuova tab" aria-label="Open BDFoundry map">🌐</a>
     </div>
     <div class="map-zoom-hint" id="map-zoom-hint">Scroll per zoom · Drag per pan · F per fullscreen</div>
     <svg id="sailing-map-svg" viewBox="0 0 1000 700" style="width: 100%; height: auto; max-height: 720px; display: block; cursor: grab;" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Sailing map of Great Ocean">
@@ -1914,6 +1916,7 @@
         <div><strong style="color: #60a5fa;">💨 Fast Currents</strong> — frecce animate, +1.7× velocità</div>
         <div><strong style="color: #ec4899;">🐙 Monster Zones</strong> — aree pulsanti, spawn schedulati</div>
         <div style="grid-column: 1 / -1; padding-top: 8px; border-top: 1px solid rgba(212,165,72,0.2); font-style: italic; opacity: 0.75;">Continenti in marrone: Calpheonia (W), Margoria (NW), Mediah/Valencia (E). Filtro <strong>💨 Currents</strong> isola le correnti, <strong>🐙 Sea Monsters</strong> isola i marker + zone spawn.</div>
+        <div style="grid-column: 1 / -1; opacity: 0.65; font-size: 0.78rem;">🌐 Per la mappa interattiva geografica completa con tutti i node (NPC, gathering, monster spawn dettagliato), apri <a href="https://www.blackdesertfoundry.com/map/#4/-8.89/-25.22" target="_blank" rel="noopener" style="color: var(--brass-bright);">BDFoundry Map</a> in nuova tab (bottone 🌐 nella toolbar).</div>
       </div>
     </div>
   </details>
