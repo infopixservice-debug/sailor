@@ -1577,7 +1577,26 @@
 <div class="panel" id="panel-barter">
   <h2>💰 Barter Calculator</h2>
   <p class="hint">Calcola profitto, gestisci Parley, esplora i barter items e valuta exchange rates. Dati basati sul Serenity Barter Calculator v2.6.</p>
-  
+
+  <details style="margin: 10px 0 18px 0; background: linear-gradient(135deg, rgba(34,197,94,0.12), rgba(20,30,45,0.6)); border: 1px solid rgba(34,197,94,0.45); border-radius: 8px; padding: 10px 14px;">
+    <summary style="cursor: pointer; color: #4ade80; font-family: 'Cinzel', serif; font-weight: 600; user-select: none;">
+      🆕 Patch Notes — Barter Update (16 Apr 2026 NA/EU) <small style="opacity:0.7; font-weight:normal;">click per dettagli</small>
+    </summary>
+    <ul style="margin: 10px 0 4px 0; padding-left: 20px; font-size: 0.86rem; line-height: 1.55;">
+      <li><strong>Nuove rotte L6 & L7</strong> — connettono i porti principali di ogni continente (50M e 100M silver).</li>
+      <li><strong>T5 silver raddoppiato</strong>: Sea Coin barter 5M → <strong style="color:#4ade80;">10M</strong>. Great Ocean (Margoria) 10M → <strong style="color:#fbbf24;">25M</strong>.</li>
+      <li><strong>Parley standardizzato</strong>: 58.180 → <strong style="color:#4ade80;">14.286</strong> (Great Ocean), 46.544 → <strong style="color:#4ade80;">21.650</strong> (Sea Coin). T6/T7 = 10.675.</li>
+      <li><strong>T2 peso dimezzato</strong>: 800 LT → 400 LT (più carico per giro).</li>
+      <li><strong>1:1 barter rimossi</strong> — il minimum exchange è stato alzato per L1→L2 e L2→L3, niente più "scambi vuoti".</li>
+      <li><strong>Crow's Nest reopened</strong> — nebbia rimossa; Crow Coin exchange spostato da <em>Hakoven Island</em> a <em>Crow's Nest</em>.</li>
+      <li><strong>Barter button range +20%</strong> — ora si attiva da più lontano (QoL).</li>
+      <li><strong>⚠️ Trade goods non trasportabili</strong> via Transport system — devi navigare le rotte manualmente (design intenzionale per le nuove routes inter-continentali).</li>
+    </ul>
+    <div style="font-size: 0.76rem; opacity: 0.7; border-top: 1px solid rgba(212,165,72,0.2); padding-top: 8px; margin-top: 8px;">
+      Fonte: <a href="https://www.naeu.playblackdesert.com/en-US/News/Detail?groupContentNo=9973&countryType=en-US" target="_blank" rel="noopener" style="color: var(--brass-bright);">Patch Notes NA/EU 16-Apr-2026</a> (ufficiale Pearl Abyss).
+    </div>
+  </details>
+
   <h3>⚙️ Impostazioni</h3>
   <div class="filters">
     <div class="filter-group">
@@ -1623,10 +1642,11 @@
       </div>
       <div id="route-roi-output"></div>
       <p class="hint" style="margin-top: 10px; font-size: 0.78rem;">
-        💡 <strong>Silver values verificati:</strong>
-        T1 ~600k · T2/T3 ~1M · T4 ~2M · T5 ~5M · T5m ~10M (Davdzsi/BDFoundry, Jan 2026) ·
-        <strong style="color: var(--green);">T6 50M · T7 100M</strong> (patch ufficiale Pearl Abyss 16-Apr-2026).
-        <br>⚠️ I valori T1-T5 sono medie (oscillano per item — vedi BDO Codex per dettaglio).
+        💡 <strong>Silver values verificati post Apr-16-2026 (NA/EU patch ufficiale):</strong>
+        T1 ~600k · T2/T3 ~1M · T4 ~2M ·
+        <strong style="color: var(--green);">T5 10M · T5m 25M (Great Ocean rare) · T6 50M · T7 100M</strong>.
+        Parley standardizzato: <strong>14.286 trade · 21.650 Sea Coin · 10.675 T6/T7</strong>.
+        <br>⚠️ I valori T1-T4 sono medie (oscillano per item — vedi BDO Codex per dettaglio).
         Il calcolo Silver/Hour assume <strong>tutti i barter completati senza fail</strong>, no tempo di restock al wharf
         e disponibilità rotta — è un <strong>upper bound teorico</strong>.
         T6/T7 richiedono viaggi inter-continentali (no Transport possibile, "trade goods can no longer be moved via Transport").
@@ -1978,8 +1998,8 @@
         <div><strong style="color: #f4c96b;">⚓ Hubs</strong> — Epheria, Velia, Iliya, Ancado, Crow's Nest, Oquilla</div>
         <div><strong style="color: #4ade80;">🟢 T1–T2</strong> — barter coste Calpheonia (200–400 LT)</div>
         <div><strong style="color: #60a5fa;">🔵 T3–T4</strong> — Olvia/Iliya coast (500–750 LT)</div>
-        <div><strong style="color: #c084fc;">🟣 T5</strong> — Sea Coin barters (1000 LT)</div>
-        <div><strong style="color: #fbbf24;">🟡 T5m</strong> — Margoria isole (1000 LT, ~10M silver)</div>
+        <div><strong style="color: #c084fc;">🟣 T5</strong> — Sea Coin barters (1000 LT, 10M silver post-Apr-16-2026)</div>
+        <div><strong style="color: #fbbf24;">🟡 T5m</strong> — Margoria isole (1000 LT, 25M silver — Great Ocean rare)</div>
         <div><strong style="color: #fb923c;">🟠 T6</strong> — L5→L6 (2000 LT, 50M silver, parley 10.675) — NW Margoria + Valencia</div>
         <div><strong style="color: #f87171;">🔴 T7</strong> — L6→L7 (2000 LT, 100M silver, parley 10.675) — Olvia/Iliya/Sanctuary</div>
         <div><strong style="color: #60a5fa;">💨 Fast Currents</strong> — frecce animate, +1.7× velocità</div>
