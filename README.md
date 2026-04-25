@@ -36,9 +36,3 @@ HTML + CSS + vanilla JS — zero dipendenze, zero build step. Un singolo file `i
 
 Hosting: **Cloudflare Pages** — deploy automatico da `main`.
 
-## Fonti dati
-
-- Grumpy Green BDO Sailors Guide, SakushibaYoski spreadsheet
-- Serenity Barter Calculator v2.6 (RAIZEL#6238)
-- Trinity Online Barter Tracker v3.2
-- Patch notes ufficiali BDO NA/EU (Mar 2025, Apr 2025), BDFoundry
