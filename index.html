@@ -1502,23 +1502,37 @@
 <!-- ============ BUILDER ============ -->
 <div class="panel" id="panel-builder">
   <h2>⚓ Build Optimizer</h2>
-  <p class="hint">Scegli obiettivo e cabin slots, ricevi le top combo precalcolate per il tuo equipaggio.</p>
+  <p class="hint">Build generati al volo dalle 20 stat sailor reali (post-Apr-16-2026). Slot speciali (First Mate, Cannon, Sail/Wheel/Deck/Mess/Fish) <strong>non consumano cabin</strong> — questo optimizer mostra solo l'equipaggio "free cabin". Carrack/Panokseon = 110 cabin max.</p>
   <div class="filters">
     <div class="filter-group">
-      <label>Cabin Slots</label>
+      <label>Cabin Budget</label>
       <select id="build-slots">
-        <option value="10">10 Slots (early ship)</option>
-        <option value="30" selected>30 Slots (Carrack/Panokseon)</option>
+        <option value="30">30 (Sailboat / piccoli)</option>
+        <option value="60">60 (Caravel / Carrack early)</option>
+        <option value="80">80 (Carrack mid-game)</option>
+        <option value="100">100 (Carrack std)</option>
+        <option value="110" selected>110 (Carrack/Panokseon max)</option>
+      </select>
+    </div>
+    <div class="filter-group">
+      <label>Race filter</label>
+      <select id="build-race">
+        <option value="">Tutte le race</option>
+        <option value="Goblin">Goblin (light, top barter)</option>
+        <option value="Human">Human (versatili)</option>
+        <option value="Dwarf">Dwarf (cannon)</option>
+        <option value="Giant">Giant (heavy, alto stat)</option>
       </select>
     </div>
     <div class="filter-group">
       <label>Obiettivo</label>
       <select id="build-goal">
-        <option value="smh">🌊 SMH (Speed + Accel)</option>
-        <option value="barter">💰 Bartering (Weight + Speed)</option>
-        <option value="turn">↪️ Turn</option>
+        <option value="smh">🌊 SMH (Speed + Accel combat)</option>
+        <option value="barter" selected>💰 Bartering (Speed × cargo)</option>
+        <option value="cannon">💥 Cannon (Sea Monster Hunting)</option>
+        <option value="turn">↪️ Turn (manovrabilità)</option>
         <option value="brake">🛑 Brake</option>
-        <option value="total">⚖️ Bilanciato (Total)</option>
+        <option value="total">⚖️ Total stats</option>
         <option value="speed">⚡ Speed puro</option>
         <option value="accel">🚀 Accel puro</option>
       </select>
@@ -2439,7 +2453,115 @@ const SCORES = {
   "Curious":         { weight: 67, speed: 11, accel: 63, turn: 5, brake: 25, total: 28, smh: 37, barter: 39 },
 };
 
-// Precalc combo builds for 30 slots (from sheet)
+// META 2026 — composizioni community-confermate (BDFoundry Carrack guide Feb 2026 + GrumpyG sailors guide).
+// Match per cabin esatto + composition esatta (in qualsiasi ordine). Marca i build top con badge ⭐.
+const META_2026_BUILDS = [
+  // Barter speed-focus (Goblin spam)
+  { sailors: { 'Innocent': 6 },                                tag: 'Barter speed (Goblin)' },
+  { sailors: { 'Innocent': 5 },                                tag: 'Barter starter' },
+  { sailors: { 'Innocent': 4 },                                tag: 'Barter early Carrack' },
+  { sailors: { 'Innocent': 4, 'Quick': 4 },                    tag: 'Barter + BreezySail' },
+  { sailors: { 'Innocent': 4, 'Powerful': 3 },                 tag: 'Barter + combat' },
+  { sailors: { 'Ambitious': 6 },                               tag: 'Barter raw speed' },
+  { sailors: { 'Innocent': 3, 'Ambitious': 3 },                tag: 'Barter mixed Goblin' },
+  // Combat / SMH
+  { sailors: { 'Powerful': 3, 'Smart': 1 },                    tag: 'Combat balanced (legacy)' },
+  { sailors: { 'Powerful': 3, 'Confident': 1 },                tag: 'Combat + turn' },
+  { sailors: { 'Powerful': 3, 'Tough': 1 },                    tag: 'Combat + brake' },
+  // Cannon / Sea Monster Hunting
+  { sailors: { 'Quick-Witted': 2, 'Realistic': 2 },            tag: 'Cannon Vell/Khan' },
+  { sailors: { 'Quick-Witted': 3, 'Quick': 3 },                tag: 'Cannon + accel' },
+  { sailors: { 'Quick': 4, 'Curious': 2 },                     tag: 'Cannon Force-focus' },
+];
+
+function isMetaBuild(composition) {
+  // composition: array di {s, n} — controlla se matcha una entry META 2026
+  const compMap = {};
+  composition.forEach(c => { compMap[c.s] = (compMap[c.s] || 0) + c.n; });
+  return META_2026_BUILDS.find(meta => {
+    const keys = Object.keys(meta.sailors);
+    if (Object.keys(compMap).length !== keys.length) return false;
+    return keys.every(k => compMap[k] === meta.sailors[k]);
+  });
+}
+
+// Generatore builds dinamico (sostituisce BUILDS_30/BUILDS_10 statici).
+// Genera tutte le composizioni 1-sailor (1...maxN) + 2-sailor (1...max1, 1...max2)
+// che rientrano nel cabin budget e applica scoring per goal.
+function generateBuilds(cabinBudget, raceFilter) {
+  const candidates = SAILORS.filter(s => !raceFilter || s.race === raceFilter);
+  const builds = [];
+
+  function makeBuild(comp) {
+    const totalCabin = comp.reduce((sum, c) => sum + c.sailor.cabin * c.n, 0);
+    if (totalCabin > cabinBudget || totalCabin === 0) return null;
+    const totalWeight = comp.reduce((sum, c) => sum + c.sailor.weight * c.n, 0);
+    const sailorCount = comp.reduce((sum, c) => sum + c.n, 0);
+    let speed = 0, accel = 0, turn = 0, brake = 0;
+    comp.forEach(c => {
+      speed += c.sailor.speed * c.n;
+      accel += c.sailor.accel * c.n;
+      turn  += c.sailor.turn  * c.n;
+      brake += c.sailor.brake * c.n;
+    });
+    const round1 = (n) => Math.round(n * 10) / 10;
+    const composition = comp.map(c => ({ s: c.sailor.name, n: c.n }));
+    const cannonNames = ['Quick-Witted', 'Quick', 'Realistic', 'Curious'];
+    const cannonCount = comp.reduce((s, c) => s + (cannonNames.includes(c.sailor.name) ? c.n : 0), 0);
+
+    // Scoring formulas (unit: arbitrary, comparable nello stesso goal):
+    // - smh = combat (2x speed + 2x accel) — ranking per SMH score classico
+    // - barter = speed * 30 + accel * 15 - turn*2 - brake*2 - weight/10 — pesa MOLTO il weight (Goblin > Human > Giant)
+    //           perché il sailor weight sottrae direttamente carico barter sulla Carrack
+    // - cannon = cannonCount * 100 + (speed + accel) * 5 — favorisce le 4 cannon-specialty (post Sea Coin patch)
+    // - total = sum di tutte le 4 stat × 10
+    return {
+      name: composition.map(c => `${c.n}× ${c.s}`).join(' + '),
+      composition,
+      cabin: totalCabin,
+      weight: totalWeight,
+      sailorCount,
+      speed: round1(speed),
+      accel: round1(accel),
+      turn:  round1(turn),
+      brake: round1(brake),
+      total: Math.round((speed + accel + turn + brake) * 10),
+      smh:   Math.round((speed * 2 + accel * 2) * 10),
+      barter: Math.max(0, Math.round(speed * 30 + accel * 15 - turn * 2 - brake * 2 - totalWeight / 10)),
+      cannon: cannonCount * 100 + Math.round((speed + accel) * 5),
+      meta: isMetaBuild(composition)
+    };
+  }
+
+  // 1-sailor stacks (1..min(8, budget/cabin) copies)
+  for (const s of candidates) {
+    const maxN = Math.min(10, Math.floor(cabinBudget / s.cabin));
+    for (let n = 1; n <= maxN; n++) {
+      const b = makeBuild([{ sailor: s, n }]);
+      if (b) builds.push(b);
+    }
+  }
+  // 2-sailor combos (n1=1..6, n2=1..6 per ogni coppia)
+  for (let i = 0; i < candidates.length; i++) {
+    for (let j = i + 1; j < candidates.length; j++) {
+      const s1 = candidates[i], s2 = candidates[j];
+      const max1 = Math.min(6, Math.floor(cabinBudget / s1.cabin));
+      const max2 = Math.min(6, Math.floor(cabinBudget / s2.cabin));
+      for (let n1 = 1; n1 <= max1; n1++) {
+        if (n1 * s1.cabin > cabinBudget) break;
+        for (let n2 = 1; n2 <= max2; n2++) {
+          if (n1 * s1.cabin + n2 * s2.cabin > cabinBudget) break;
+          const b = makeBuild([{ sailor: s1, n: n1 }, { sailor: s2, n: n2 }]);
+          if (b) builds.push(b);
+        }
+      }
+    }
+  }
+  return builds;
+}
+
+// === BUILDS_30 / BUILDS_10 deprecati (sostituiti da generateBuilds()).
+// Mantenuti come riferimento storico per debug. Rimuovi in v3 se non più usati.
 const BUILDS_30 = [
   // Pure stacks 3x
   { name: "3x Born-in-the-Sea", composition: [{s:"Born-in-the-Sea",n:3}], cabin: 30, weight: 1500, speed: 6.0, accel: 0.9, turn: 0.9, brake: 0.9, total: 33, smh: 54, barter: 78 },
@@ -5286,35 +5408,63 @@ function showDetail(name) {
 
 // ============ BUILDER ============
 function renderBuilds() {
-  const slots = document.getElementById('build-slots').value;
+  const cabinBudget = parseInt(document.getElementById('build-slots').value);
   const goal = document.getElementById('build-goal').value;
-  const builds = slots === '10' ? BUILDS_10 : BUILDS_30;
-  
-  const sorted = [...builds].sort((a, b) => (b[goal] || 0) - (a[goal] || 0));
+  const raceFilter = document.getElementById('build-race')?.value || '';
+
+  const builds = generateBuilds(cabinBudget, raceFilter);
+  // Sort by goal score desc, dedupe by name (rare collision but possible)
+  const seen = new Set();
+  const sorted = builds
+    .sort((a, b) => (b[goal] || 0) - (a[goal] || 0))
+    .filter(b => { if (seen.has(b.name)) return false; seen.add(b.name); return true; });
   const top10 = sorted.slice(0, 10);
-  
+
   const container = document.getElementById('build-results');
   const goalLabel = {
-    smh: '🌊 SMH Score',
+    smh:    '🌊 SMH Score',
     barter: '💰 Barter Score',
-    turn: '↪️ Turn',
-    brake: '🛑 Brake',
-    total: '⚖️ Total',
-    speed: '⚡ Speed',
-    accel: '🚀 Accel'
+    cannon: '💥 Cannon Score',
+    turn:   '↪️ Turn',
+    brake:  '🛑 Brake',
+    total:  '⚖️ Total',
+    speed:  '⚡ Speed',
+    accel:  '🚀 Accel'
   }[goal];
-  
-  container.innerHTML = `<h3>Top 10 Build per ${goalLabel}</h3>` + top10.map((b, i) => {
+
+  if (!top10.length) {
+    container.innerHTML = `<div class="empty-state">⚓ Nessun build trovato. Prova ad aumentare il cabin budget o togliere il filtro race.</div>`;
+    return;
+  }
+
+  const headerHtml = `
+    <h3>Top 10 Build per ${goalLabel}
+      <small style="font-weight: normal; opacity: 0.7; font-size: 0.78rem;">
+        — generati da ${SAILORS.length} sailor reali, cabin ≤ ${cabinBudget}${raceFilter ? `, race: ${raceFilter}` : ''}
+      </small>
+    </h3>
+    <p class="hint" style="font-size: 0.78rem;">
+      ⭐ <strong>META 2026</strong> = composizione raccomandata da BDFoundry/GrumpyG (Apr 2026).
+      Non include First Mate (slot dedicato, no cabin) né Special Slots (Sail/Wheel/Cannon/etc).
+      Stat = somma base × n copie (no growth da level — vedi Roll Tracker per stat reali).
+    </p>
+  `;
+
+  container.innerHTML = headerHtml + top10.map((b, i) => {
     const rankClass = i === 0 ? 'gold' : i === 1 ? 'silver' : i === 2 ? 'bronze' : '';
-    const summary = `${b.name} — ${b.cabin} slots | ⚖️${b.weight}LT | ⚡${b.speed} 🚀${b.accel} ↪${b.turn} 🛑${b.brake} | ${goalLabel} ${b[goal] || 0}`;
+    const metaBadge = b.meta
+      ? `<span style="background: linear-gradient(90deg, #fbbf24, #f59e0b); color: #0a1929; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; font-weight: bold; margin-left: 6px;" title="Composizione META 2026 — ${b.meta.tag}">⭐ META: ${b.meta.tag}</span>`
+      : '';
+    const summary = `${b.name} — ${b.cabin}/${cabinBudget} cabin | ${b.sailorCount} sailor | ⚖️${b.weight}LT | ⚡${b.speed} 🚀${b.accel} ↪${b.turn} 🛑${b.brake} | ${goalLabel} ${b[goal] || 0}`;
     return `
     <div class="build-result">
       <div class="build-title">
         <span class="rank-badge ${rankClass}">${i + 1}</span>
-        ${b.name}
+        ${b.name}${metaBadge}
       </div>
       <div class="build-meta">
-        <span>🛏️ ${b.cabin} slots</span>
+        <span title="Cabin used / budget">🛏️ ${b.cabin}/${cabinBudget} cabin</span>
+        <span title="Numero sailor">👥 ${b.sailorCount} sailor</span>
         <span>⚖️ ${b.weight} LT</span>
         <span>⚡ Speed ${b.speed}</span>
         <span>🚀 Accel ${b.accel}</span>
@@ -5342,6 +5492,7 @@ window.copyBuild = async function(btn, text) {
 
 document.getElementById('build-slots').addEventListener('change', renderBuilds);
 document.getElementById('build-goal').addEventListener('change', renderBuilds);
+document.getElementById('build-race')?.addEventListener('change', renderBuilds);
 
 // ============ TRACKER ============
 const STAT_KEYS = ['speed', 'accel', 'turn', 'brake'];
