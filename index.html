@@ -1293,6 +1293,11 @@
   }
   .preset-chip:hover { background: var(--brass); color: var(--ink); }
 </style>
+<!-- Motion One — vanilla JS animation library (sister di Framer Motion, stesso autore Matt Perry).
+     24 KB minified, zero React, esposto come window.Motion. Self-hosted in /assets/vendor/ per
+     PWA offline + zero dipendenze CDN. Defer per non bloccare il render.
+     Fallback: tutto continua a funzionare se non si carica (graceful degradation: if(window.Motion) checks). -->
+<script src="assets/vendor/motion.min.js" defer></script>
 </head>
 <body>
 <div class="waves"></div>
@@ -2274,6 +2279,58 @@
 <div class="toast" id="toast"></div>
 
 <script>
+// ============ MOTION ONE HELPERS (vanilla animation) ============
+// Tutto è opzionale: se window.Motion non è caricato (offline 1° visita, blocco script), tutto funziona = graceful degradation.
+// motion.min.js viene caricato con `defer` quindi è disponibile prima di DOMContentLoaded.
+
+// Rispetta prefers-reduced-motion (accessibility)
+const _prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+
+/**
+ * Stagger entrance: anima i figli diretti di un panel con apparizione sequenziale.
+ * @param {string} panelId - es. 'panel-barter'
+ */
+function staggerPanelEntrance(panelId) {
+  if (_prefersReducedMotion || !window.Motion) return;
+  const panel = document.getElementById(panelId);
+  if (!panel) return;
+  const items = Array.from(panel.children).filter(el => {
+    if (el.tagName === 'SCRIPT' || el.tagName === 'STYLE') return false;
+    const cs = getComputedStyle(el);
+    return cs.display !== 'none' && cs.visibility !== 'hidden';
+  });
+  if (!items.length) return;
+  // Set initial state senza flicker
+  items.forEach(el => { el.style.opacity = '0'; el.style.transform = 'translateY(8px)'; });
+  Motion.animate(
+    items,
+    { opacity: [0, 1], transform: ['translateY(8px)', 'translateY(0px)'] },
+    { duration: 0.45, delay: Motion.stagger(0.04, { start: 0.02 }), easing: [0.16, 1, 0.3, 1] }
+  );
+}
+
+/**
+ * Anima un elemento DOM mostrando un numero che "scorre" da prev → newValue.
+ * Usa dataset.tweenVal per ricordare l'ultimo valore (cross-call continuity).
+ * @param {HTMLElement} el
+ * @param {number} newValue
+ * @param {{duration?:number, format?:(n:number)=>string}} [opts]
+ */
+function setNumberWithTween(el, newValue, opts = {}) {
+  if (!el) return;
+  const fmt = opts.format || ((n) => Math.round(n).toLocaleString('it'));
+  if (_prefersReducedMotion || !window.Motion) { el.textContent = fmt(newValue); el.dataset.tweenVal = newValue; return; }
+  const prev = parseFloat(el.dataset.tweenVal);
+  const from = isNaN(prev) ? 0 : prev;
+  el.dataset.tweenVal = newValue;
+  if (Math.abs(from - newValue) < 0.5) { el.textContent = fmt(newValue); return; }
+  Motion.animate(from, newValue, {
+    duration: opts.duration ?? 0.55,
+    easing: 'ease-out',
+    onUpdate: (v) => { el.textContent = fmt(v); }
+  });
+}
+
 // ============ DATA ============
 const SAILORS = [
   { name: "Born-in-the-Sea", race: "Giant", appetite: 150, cabin: 10, weight: 500, speed: 2.0, accel: 0.3, turn: 0.3, brake: 0.3, range: 0, accuracy: 0, angle: 0, location: "Iliya", icon: "🗿", tag: "speed" },
@@ -4594,16 +4651,28 @@ function updateMasteryInfo() {
   const regularCost = Math.round(regularBase * (1 - total / 100));
   const seaCoinBase = 21650;
   const seaCoinCost = Math.round(seaCoinBase * (1 - total / 100));
-  
-  document.getElementById('mastery-info').innerHTML = `
-    <strong>📊 Il tuo setup:</strong><br>
-    Mastery Reduction: <strong style="color: var(--brass-bright);">${mastery.toFixed(2)}%</strong> |
-    Value Pack: <strong style="color: var(--brass-bright);">${vp}%</strong> |
-    Family Fame: <strong style="color: var(--brass-bright);">${fame}%</strong> |
-    <strong style="color: var(--green);">Total Bonus: ${total.toFixed(2)}%</strong><br>
-    Regular Barter Parley cost stimato: <strong>~${regularCost.toLocaleString('it')}</strong> |
-    Sea Coin: <strong>~${seaCoinCost.toLocaleString('it')}</strong>
-  `;
+
+  const infoEl = document.getElementById('mastery-info');
+  // Rebuild solo se la struttura non c'è ancora (evita di azzerare dataset.tweenVal ad ogni call)
+  if (!infoEl.querySelector('#mi-parley-regular')) {
+    infoEl.innerHTML = `
+      <strong>📊 Il tuo setup:</strong><br>
+      Mastery Reduction: <strong style="color: var(--brass-bright);" id="mi-mastery">0,00</strong>% |
+      Value Pack: <strong style="color: var(--brass-bright);" id="mi-vp">0</strong>% |
+      Family Fame: <strong style="color: var(--brass-bright);" id="mi-fame">0</strong>% |
+      <strong style="color: var(--green);">Total Bonus: <span id="mi-total">0,00</span>%</strong><br>
+      Regular Barter Parley cost stimato: <strong>~<span id="mi-parley-regular">0</span></strong> |
+      Sea Coin: <strong>~<span id="mi-parley-seacoin">0</span></strong>
+    `;
+  }
+  const fmt2 = (n) => n.toFixed(2).replace('.', ',');
+  document.getElementById('mi-mastery').textContent = fmt2(mastery);
+  document.getElementById('mi-vp').textContent = vp;
+  document.getElementById('mi-fame').textContent = fame;
+  document.getElementById('mi-total').textContent = fmt2(total);
+  setNumberWithTween(document.getElementById('mi-parley-regular'), regularCost);
+  setNumberWithTween(document.getElementById('mi-parley-seacoin'), seaCoinCost);
+
   // Riallinea anche il widget Silver/Ora per Rotta
   if (document.getElementById('route-roi-body')?.style.display !== 'none') renderRouteRoi();
 }
@@ -4675,6 +4744,13 @@ function renderRouteRoi() {
   };
   const fmtSilver = (n) => n == null ? '—' : n.toLocaleString('it');
 
+  // Cattura valori precedenti per tier prima del rebuild → necessario per il tween "from→to" continuo.
+  const prevByTier = {};
+  out.querySelectorAll('tr[data-tier]').forEach(tr => {
+    const v = parseFloat(tr.dataset.silverHour);
+    if (!isNaN(v)) prevByTier[tr.dataset.tier] = v;
+  });
+
   out.innerHTML = `
     <div style="overflow-x:auto;">
     <table style="width:100%; border-collapse: collapse; font-size: 0.85rem;">
@@ -4695,12 +4771,12 @@ function renderRouteRoi() {
           const rowBg = isBest ? 'background: rgba(74,222,128,0.10);' : '';
           const badge = isBest ? ' <span style="background:var(--green);color:#0a1929;padding:1px 6px;border-radius:3px;font-size:0.7rem;font-weight:bold;">BEST</span>' : '';
           return `
-            <tr style="${rowBg} border-bottom: 1px solid rgba(255,255,255,0.06);">
+            <tr data-tier="${r.tier}" data-silver-hour="${r.silverPerHour ?? ''}" style="${rowBg} border-bottom: 1px solid rgba(255,255,255,0.06);">
               <td style="padding: 6px 8px;"><strong>${r.tier}</strong>${badge}<br><small style="opacity:0.6;">${r.label}</small></td>
               <td style="padding: 6px 8px;">${fmtSilver(r.avgSilver)}</td>
               <td style="padding: 6px 8px; color: var(--brass-bright);">${fmtSilver(r.parleyCost)}</td>
               <td style="padding: 6px 8px;">${fmtSilver(r.silverPerParley)}</td>
-              <td style="padding: 6px 8px; color: ${r.silverPerHour ? 'var(--green)' : 'var(--parchment)'}; font-weight: bold;">${fmtM(r.silverPerHour)}/h</td>
+              <td class="silver-hour-cell" style="padding: 6px 8px; color: ${r.silverPerHour ? 'var(--green)' : 'var(--parchment)'}; font-weight: bold; font-variant-numeric: tabular-nums;">${fmtM(r.silverPerHour)}/h</td>
               <td style="padding: 6px 8px; opacity: 0.7;">${r.weight}</td>
               <td style="padding: 6px 8px; opacity: 0.65; font-size: 0.78rem;">${r.note || ''}</td>
             </tr>
@@ -4717,6 +4793,17 @@ function renderRouteRoi() {
       (${steps} per giro × ${(60 / timeMin).toFixed(2)} giri/ora)
     </div>
   `;
+
+  // Tween Silver/Ora cells from previous → new value (Motion One). Skip su valori null (T6/T7 senza dati avg).
+  out.querySelectorAll('tr[data-tier]').forEach(tr => {
+    const target = parseFloat(tr.dataset.silverHour);
+    if (isNaN(target)) return;
+    const cell = tr.querySelector('.silver-hour-cell');
+    if (!cell) return;
+    const from = prevByTier[tr.dataset.tier] ?? 0;
+    cell.dataset.tweenVal = from;
+    setNumberWithTween(cell, target, { format: (n) => fmtM(n) + '/h', duration: 0.7 });
+  });
 }
 
 // ============ EMPTY STATE HELPER (UI/UX Pro Max Phase 3) ============
@@ -5036,10 +5123,14 @@ function renderGuide() {
 function initTabs() {
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
+      const targetId = 'panel-' + tab.dataset.tab;
+      const wasAlreadyActive = document.getElementById(targetId)?.classList.contains('active');
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
       tab.classList.add('active');
-      document.getElementById('panel-' + tab.dataset.tab).classList.add('active');
+      document.getElementById(targetId).classList.add('active');
+      // Stagger entrance via Motion One (no-op se libreria non caricata o reduced-motion)
+      if (!wasAlreadyActive) staggerPanelEntrance(targetId);
     });
   });
 }

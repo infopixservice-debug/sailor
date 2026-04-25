@@ -1,8 +1,8 @@
 // Service worker — The Great Expedition Codex
 // Strategy: network-first for HTML (freshness), cache-first for assets (speed).
-// v2 (2026-04-22): full sailor avatar coverage + post-message update flow.
+// v3 (2026-04-25): + Motion One self-hosted vendor library.
 
-const CACHE_VERSION = 'sailing-codex-v2';
+const CACHE_VERSION = 'sailing-codex-v3';
 
 const SAILOR_AVATARS = [
   'Ambitious', 'Born in the Sea', 'Calculating', 'Confident', 'Curious',
@@ -26,6 +26,7 @@ const STATIC_ASSETS = [
   '/assets/icon-512.png',
   '/assets/icon-512-maskable.png',
   '/assets/favicon.png',
+  '/assets/vendor/motion.min.js',
   ...SAILOR_AVATARS
 ];
 
